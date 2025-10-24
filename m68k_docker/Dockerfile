@@ -11,7 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       make gcc g++ tk quilt curl git wget ca-certificates \
-      xauth libx11-6 libxext6 libxft2 libxrender1 \
+      xauth libx11-6 libxext6 libxft2 libxrender1 fonts-ipafont \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /tmp_for_bsvc
