@@ -55,7 +55,8 @@ boot:
     /* 送受信 (UART1) 関係の初期化 (割り込みレベルは 4 に固定されている) */
     move.w #0x0000, USTCNT1 | リセット
     * move.w #0xe100, USTCNT1 | 送受信可能, パリティなし, 1 stop, 8 bit, 送受割り込み禁止
-    move.w #0xe108, USTCNT1 | 受信可能
+    * move.w #0xe108, USTCNT1 | 受信割り込み可能
+    move.w #0xe104, USTCNT1   | 送信割り込み可能
     move.w #0x0038, UBAUD1  | baud rate = 230400 bps
 
     /* タイマ関係の初期化 (割り込みレベルは 6 に固定されている) */
@@ -72,16 +73,17 @@ boot:
 .section .text
 .even
 MAIN:
-    move.w #0x0800+'a', UTX1 | 0x0800 を足す理由については付録参照
+    move.w #0x0800+'a', UTX1
 LOOP:
     bra LOOP
 
 /* 割り込みハンドラ */
 uart1_interrupt:
     movem.l %D0-%D7/%A0-%A6,-(%SP)  | 使用するレジスタをスタックに保存
-    move.w URX1, %D0                | 受信データをD0に格納
+    clr.w %D0                       | D0をクリア
+    * move.w URX1, %D0                | 受信データをD0に格納
+    move.w #'a', %D0                | 'a'をD0に格納
     ori #0x0800, %D0                | 送信データを用意
-    addi #1, %D0
     move.w %D0, UTX1                | 送信
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
     rte
