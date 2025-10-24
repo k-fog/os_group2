@@ -1,5 +1,5 @@
 /* レジスタ定義 */
-.equ REGBASE, 0xFFF000 | DMAP を使用．
+.equ REGBASE, 0xfff000 | DMAP を使用．
 .equ IOBASE, 0x00d00000
 
 /* 割り込み関係のレジスタ*/
@@ -49,17 +49,22 @@ boot:
     move.b #0x40, IVR       | ユーザ割り込みベクタ番号を0x40+levelに設定
     move.l #0x00ffffff, IMR | 全割り込みマスク
 
+    move.l #uart1_interrupt, 0x110 | UART1の割り込みベクタを登録
+    move.l #tmr1_interrupt, 0x118  | TIMER1の割り込みベクタを登録
+
     /* 送受信 (UART1) 関係の初期化 (割り込みレベルは 4 に固定されている) */
     move.w #0x0000, USTCNT1 | リセット
-    move.w #0xe100, USTCNT1 | 送受信可能, パリティなし, 1 stop, 8 bit,
-    | 送受割り込み禁止
-    move.w #0x0126, UBAUD1  | baud rate = 38400 bps
+    * move.w #0xe100, USTCNT1 | 送受信可能, パリティなし, 1 stop, 8 bit, 送受割り込み禁止
+    move.w #0xe108, USTCNT1 | 受信可能
+    move.w #0x0038, UBAUD1  | baud rate = 230400 bps
 
     /* タイマ関係の初期化 (割り込みレベルは 6 に固定されている) */
     move.w #0x0004, TCTL1   | restart, 割り込み不可,
     | システムクロックの 1/16 を単位として計時，
     | タイマ使用停止
-    move.w #0x2000,%SR    | 割り込み許可
+
+    move.l #0xff3ffb, IMR | UART1の割り込みを許可
+    move.w #0x2000,%SR    | スーパーバイザモード・走行レベルは0
     bra MAIN
 
 /* 現段階での初期化ルーチンの正常動作を確認するため，最後に ’a’ を
@@ -72,7 +77,16 @@ LOOP:
     bra LOOP
 
 /* 割り込みハンドラ */
-interrupt:
+uart1_interrupt:
+    movem.l %D0-%D7/%A0-%A6,-(%SP)  | 使用するレジスタをスタックに保存
+    move.w URX1, %D0                | 受信データをD0に格納
+    ori #0x0800, %D0                | 送信データを用意
+    addi #1, %D0
+    move.w %D0, UTX1                | 送信
+    movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
+    rte
+
+tmr1_interrupt:
     movem.l %D0-%D7/%A0-%A6,-(%SP)  | 使用するレジスタをスタックに保存
     /* TODO ここで割り込みの原因となった事象に対処する処理を行う． */
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
