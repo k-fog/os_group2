@@ -88,10 +88,32 @@ LOOP:
 
 uart1_interrupt:
     movem.l %D0-%D7/%A0-%A6,-(%SP)  | 使用するレジスタをスタックに保存
-    clr.w %D0                       | D0をクリア
-    move.w URX1, %D0                | 受信データをD0に格納
-    ori #0x0800, %D0                | 送信データを用意
-    move.w %D0, UTX1                | 送信
+    * clr.w %D0                       | D0をクリア
+    * move.w URX1, %D0                | 受信データをD0に格納
+    * ori #0x0800, %D0                | 送信データを用意
+    * move.w %D0, UTX1                | 送信
+
+    move.w UTX1, %D0                | UTX1をD0レジスタにコピーし保存しておく
+    move.w %D0, %D1                 | 計算用にD1レジスタにコピー
+    lsr.w #8, %D1
+    lsr.w #7, %D1                  | 15回右シフト（上位ビットは0埋め）
+    cmp.w #0, %D1                   | 0=FIFOが空ではない, 1=空である
+    bne UART1_INTR_SKIP_PUT         | 送信割り込みでないならスキップ
+    move.l #0, %D1                  | ch=%D1.L=0
+    jsr INTERPUT
+    bra UART1_INTR_END
+UART1_INTR_SKIP_PUT:
+    move.w URX1, %D3                | 受信レジスタ URX1 を %D3.W にコピー
+    move.b %D3, %D2                 | %D3.W の下位 8bit(データ部分) を %D2.B にコピー
+    lsr.w #8, %D3
+    lsr.w #5, %D3                  | 13回右シフト（上位ビットは0埋め）
+    and.w #0x1, %D3                 | 1bit目以外を0に
+    cmp.w #1, %D3                   | 0 = 受信 FIFO にデータがない．1 = データがある
+    bne UART1_INTR_SKIP_GET
+    clr.l %D1                       | ch = %D1.L = 0, (data = %D2.Bは代入済)
+    jsr INTERGET
+UART1_INTR_SKIP_GET:
+UART1_INTR_END:
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
     rte
 
