@@ -49,14 +49,15 @@ boot:
     move.b #0x40, IVR       | ユーザ割り込みベクタ番号を0x40+levelに設定
     move.l #0x00ffffff, IMR | 全割り込みマスク
 
+    move.l #syscall_handler, 0x080 | TRAP#0の割り込みベクタを登録
     move.l #uart1_interrupt, 0x110 | UART1の割り込みベクタを登録
     move.l #tmr1_interrupt, 0x118  | TIMER1の割り込みベクタを登録
 
     /* 送受信 (UART1) 関係の初期化 (割り込みレベルは 4 に固定されている) */
     move.w #0x0000, USTCNT1 | リセット
     * move.w #0xe100, USTCNT1 | 送受信可能, パリティなし, 1 stop, 8 bit, 送受割り込み禁止
-    * move.w #0xe108, USTCNT1 | 受信割り込み可能
-    move.w #0xe104, USTCNT1   | 送信割り込み可能
+    move.w #0xe108, USTCNT1 | 受信割り込み可能
+    * move.w #0xe104, USTCNT1   | 送信割り込み可能
     move.w #0x0038, UBAUD1  | baud rate = 230400 bps
 
     /* タイマ関係の初期化 (割り込みレベルは 6 に固定されている) */
@@ -73,16 +74,22 @@ boot:
 .section .text
 .even
 MAIN:
+    move.w #0x0800+'s', UTX1
+    move.w #0x0800+'t', UTX1
     move.w #0x0800+'a', UTX1
+    move.w #0x0800+'r', UTX1
+    move.w #0x0800+'t', UTX1
+    move.w #0x0800+'\n', UTX1
 LOOP:
     bra LOOP
 
 /* 割り込みハンドラ */
+.include "syscall.s"
+
 uart1_interrupt:
     movem.l %D0-%D7/%A0-%A6,-(%SP)  | 使用するレジスタをスタックに保存
     clr.w %D0                       | D0をクリア
-    * move.w URX1, %D0                | 受信データをD0に格納
-    move.w #'a', %D0                | 'a'をD0に格納
+    move.w URX1, %D0                | 受信データをD0に格納
     ori #0x0800, %D0                | 送信データを用意
     move.w %D0, UTX1                | 送信
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
@@ -93,5 +100,3 @@ tmr1_interrupt:
     /* TODO ここで割り込みの原因となった事象に対処する処理を行う． */
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
     rte
-
-* 試しにコミット
