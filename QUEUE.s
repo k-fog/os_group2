@@ -251,5 +251,3 @@ INQ_Result: .ds.l   300
 OUTQ_Data:  .ds.b   300
 OUTQ_Result:.ds.l   300
 
-.end
-

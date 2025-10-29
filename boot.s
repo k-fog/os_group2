@@ -64,7 +64,7 @@ boot:
     move.w #0x0004, TCTL1   | restart, 割り込み不可,
     | システムクロックの 1/16 を単位として計時，
     | タイマ使用停止
-    jsr	Init_Q
+    |jsr	Init_Q
 
     move.l #0xff3ffb, IMR | UART1の割り込みを許可
     move.w #0x2000,%SR    | スーパーバイザモード・走行レベルは0
@@ -86,7 +86,7 @@ LOOP:
 
 /* 割り込みハンドラ */
 .include "syscall.s"
-.include "INQ_OUTQ.s"
+.include "QUEUE.s"
 uart1_interrupt:
     movem.l %D0-%D7/%A0-%A6, -(%SP) | 使用するレジスタをスタックに保存
     * clr.w %D0                       | D0をクリア
@@ -101,7 +101,7 @@ uart1_interrupt:
     cmp.w #0, %D1                   | 0=FIFOが空ではない, 1=空である
     bne UART1_INTR_SKIP_PUT         | 送信割り込みでないならスキップ
     move.l #0, %D1                  | ch=%D1.L=0
-    jsr INTERPUT
+    |jsr INTERPUT
     bra UART1_INTR_END
 UART1_INTR_SKIP_PUT:
     move.w URX1, %D3                | 受信レジスタ URX1 を %D3.W にコピー
@@ -112,7 +112,7 @@ UART1_INTR_SKIP_PUT:
     cmp.w #1, %D3                   | 0 = 受信 FIFO にデータがない．1 = データがある
     bne UART1_INTR_SKIP_GET
     clr.l %D1                       | ch = %D1.L = 0, (data = %D2.Bは代入済)
-    jsr INTERGET
+    |jsr INTERGET
 UART1_INTR_SKIP_GET:
 UART1_INTR_END:
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
@@ -125,7 +125,7 @@ tmr1_interrupt:
     cmp.w #0, %D0
     beq TMR1_END                    | TSTAT1 の第 0 ビットが 1 となっているかどうかをチェックする．0 ならば rte で復帰
     clr.w TSTAT1                    | TSTAT1 を 0 クリア
-    jsr CALL_RP
+    |jsr CALL_RP
 TMR1_END:
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
     rte
