@@ -85,7 +85,7 @@ LOOP:
 
 /* 割り込みハンドラ */
 .include "syscall.s"
-
+.include "INQ_OUTQ.s"
 uart1_interrupt:
     movem.l %D0-%D7/%A0-%A6, -(%SP) | 使用するレジスタをスタックに保存
     * clr.w %D0                       | D0をクリア
