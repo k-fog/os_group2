@@ -64,6 +64,7 @@ boot:
     move.w #0x0004, TCTL1   | restart, 割り込み不可,
     | システムクロックの 1/16 を単位として計時，
     | タイマ使用停止
+    jsr	Init_Q
 
     move.l #0xff3ffb, IMR | UART1の割り込みを許可
     move.w #0x2000,%SR    | スーパーバイザモード・走行レベルは0
