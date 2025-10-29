@@ -128,3 +128,5 @@ tmr1_interrupt:
 TMR1_END:
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
     rte
+
+.end
