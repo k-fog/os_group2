@@ -70,8 +70,6 @@ boot:
     move.w #0x2000,%SR    | スーパーバイザモード・走行レベルは0
     bra MAIN
 
-/* 現段階での初期化ルーチンの正常動作を確認するため，最後に ’a’ を
- * 送信レジスタ UTX1 に書き込む．’a’ が出力されれば，OK. */
 .section .text
 .even
 MAIN:
@@ -92,7 +90,8 @@ MAIN:
     move.l #'c', %D1
     jsr INQ
 
-    move.w #0xe104, USTCNT1   | 送信割り込み可能
+    move.w #0xe10c, USTCNT1   | 送受信割り込み可能
+    * move.w #0xe104, USTCNT1   | 送信割り込み可能
 
     move.w #0x0800+'h', UTX1
     move.w #0x0800+'l', UTX1
@@ -106,21 +105,15 @@ LOOP:
 .include "QUEUE.s"
 uart1_interrupt:
     movem.l %D0-%D7/%A0-%A6, -(%SP) | 使用するレジスタをスタックに保存
-    * clr.w %D0                       | D0をクリア
-    * move.w URX1, %D0                | 受信データをD0に格納
-    * ori #0x0800, %D0                | 送信データを用意
-    * move.w %D0, UTX1                | 送信
     move.w UTX1, %D0                | UTX1をD0レジスタにコピーし保存しておく
     move.w %D0, %D1                 | 計算用にD1レジスタにコピー
     lsr.w #8, %D1
     lsr.w #7, %D1                   | 15回右シフト（上位ビットは0埋め）
-    cmpi.w #0, %D1                  | 0=FIFOが空ではない（送信する）, 1=空である（送信しない）
-    beq UART1_INTR_SKIP_PUT         | 送信割り込みでないならスキップ
+    cmpi.w #1, %D1                  | 0=FIFOが空ではない, 1=空である（割り込み発生）
+    bne UART1_INTR_SKIP_PUT         | 送信割り込みでないならスキップ
     move.l #0, %D1                  | ch=%D1.L=0
-
     move.w #0x0800+'t', UTX1
     move.w #0x0800+'x', UTX1
-
     jsr INTERPUT
     bra UART1_INTR_END
 UART1_INTR_SKIP_PUT:

@@ -45,7 +45,7 @@ INTERPUT:
 	movem.l %d0-%d2,-(%sp)
 	
 	/* (1) */
-	move.w  #0x2700,%sr
+	move.w  #0x2700, %sr
 	/* (2) */
 	cmpi #0, %d1
 	bne	End_INTERPUT
@@ -59,7 +59,8 @@ INTERPUT:
 	beq	INTERPUT_MASK
 	/* (5) */
 	/* d1をUTX1に代入（下位８bit） */
-	move.b	%d1, UTX1
+	ori #0x0800, %D1                | ヘッダを代入
+	move.w %D0, UTX1                | 送信
 	bra	End_INTERPUT
 INTERPUT_MASK:
 	/* (4)' */
@@ -67,8 +68,7 @@ INTERPUT_MASK:
 	move.w	USTCNT1, %d2
 	andi.w	#0xFFFB, %d2	/* 0xFFFB = 1111111111111011 */
 	move.w	%d2,	USTCNT1 /* 送信失敗した場合、USTCNT1のTXEEを0にする */
-	
-	jsr	End_INTERPUT
+	bra End_INTERPUT
 End_INTERPUT:
 	movem.l (%sp)+, %d0-%d2
 	rts
