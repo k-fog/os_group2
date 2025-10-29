@@ -64,7 +64,7 @@ boot:
     move.w #0x0004, TCTL1   | restart, 割り込み不可,
     | システムクロックの 1/16 を単位として計時，
     | タイマ使用停止
-    |jsr	Init_Q
+    jsr	Init_Q            | キューの初期化
 
     move.l #0xff3ffb, IMR | UART1の割り込みを許可
     move.w #0x2000,%SR    | スーパーバイザモード・走行レベルは0
@@ -81,13 +81,22 @@ MAIN:
     move.w #0x0800+'r', UTX1
     move.w #0x0800+'t', UTX1
     move.w #0x0800+'\n', UTX1
-    move.w #1, %D0
-    trap #0
-    move.w #0x0800+'f', UTX1
-    move.w #0x0800+'u', UTX1
-    move.w #0x0800+'k', UTX1
-    move.w #0x0800+'k', UTX1
-    move.w #0x0800+'i', UTX1
+    
+    moveq.l #1, %D0
+    move.l #'a', %D1
+    jsr INQ
+    moveq.l #1, %D0
+    move.l #'b', %D1
+    jsr INQ
+    moveq.l #1, %D0
+    move.l #'c', %D1
+    jsr INQ
+
+    move.w #0xe104, USTCNT1   | 送信割り込み可能
+
+    move.w #0x0800+'h', UTX1
+    move.w #0x0800+'l', UTX1
+    move.w #0x0800+'t', UTX1
     move.w #0x0800+'\n', UTX1
 LOOP:
     bra LOOP
@@ -101,15 +110,18 @@ uart1_interrupt:
     * move.w URX1, %D0                | 受信データをD0に格納
     * ori #0x0800, %D0                | 送信データを用意
     * move.w %D0, UTX1                | 送信
-
     move.w UTX1, %D0                | UTX1をD0レジスタにコピーし保存しておく
     move.w %D0, %D1                 | 計算用にD1レジスタにコピー
     lsr.w #8, %D1
     lsr.w #7, %D1                   | 15回右シフト（上位ビットは0埋め）
-    cmp.w #0, %D1                   | 0=FIFOが空ではない, 1=空である
-    bne UART1_INTR_SKIP_PUT         | 送信割り込みでないならスキップ
+    cmpi.w #0, %D1                  | 0=FIFOが空ではない（送信する）, 1=空である（送信しない）
+    beq UART1_INTR_SKIP_PUT         | 送信割り込みでないならスキップ
     move.l #0, %D1                  | ch=%D1.L=0
-    * jsr INTERPUT
+
+    move.w #0x0800+'t', UTX1
+    move.w #0x0800+'x', UTX1
+
+    jsr INTERPUT
     bra UART1_INTR_END
 UART1_INTR_SKIP_PUT:
     move.w URX1, %D3                | 受信レジスタ URX1 を %D3.W にコピー
@@ -117,9 +129,11 @@ UART1_INTR_SKIP_PUT:
     lsr.w #8, %D3
     lsr.w #5, %D3                   | 13回右シフト（上位ビットは0埋め）
     and.w #0x1, %D3                 | 0bit目以外を0に
-    cmp.w #1, %D3                   | 0 = 受信 FIFO にデータがない．1 = データがある
+    cmpi.w #1, %D3                  | 0 = 受信 FIFO にデータがない．1 = データがある
     bne UART1_INTR_SKIP_GET
     clr.l %D1                       | ch = %D1.L = 0, (data = %D2.Bは代入済)
+    move.w #0x0800+'r', UTX1
+    move.w #0x0800+'x', UTX1
     * jsr INTERGET
 UART1_INTR_SKIP_GET:
 UART1_INTR_END:

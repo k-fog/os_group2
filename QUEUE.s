@@ -47,7 +47,7 @@ INTERPUT:
 	/* (1) */
 	move.w  #0x2700,%sr
 	/* (2) */
-	cmp	#0, %d1
+	cmpi #0, %d1
 	bne	End_INTERPUT
 	/* (3) */
 	moveq	#1, %d0
@@ -55,12 +55,12 @@ INTERPUT:
 	*出力１：d0(失敗 0/ 成功 1 )
 	*出力２：d1（取り出した8bitデータ）
 	/* (4) */
-	cmp	#0, %d0
+	cmpi #0, %d0
 	beq	INTERPUT_MASK
 	/* (5) */
 	/* d1をUTX1に代入（下位８bit） */
 	move.b	%d1, UTX1
-	jsr	End_INTERPUT
+	bra	End_INTERPUT
 INTERPUT_MASK:
 	/* (4)' */
 	/* マスク操作 */
