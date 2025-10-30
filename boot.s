@@ -67,7 +67,7 @@ boot:
     jsr	Init_Q            | キューの初期化
 
     move.l #0xff3ffb, IMR | UART1の割り込みを許可
-    move.w #0x2000,%SR    | スーパーバイザモード・走行レベルは0
+    move.w #0x2000, %SR   | スーパーバイザモード・走行レベルは0
     bra MAIN
 
 .section .text
@@ -80,23 +80,25 @@ MAIN:
     move.w #0x0800+'t', UTX1
     move.w #0x0800+'\n', UTX1
     
+    move.l #16, %D2
+    moveq #'a', %D3
+PUSH_LOOP:
+    subq.w #1, %D2
+    blt END_PUSH_LOOP_INNER
     moveq.l #1, %D0
-    move.l #'a', %D1
+    move.l %D3, %D1
     jsr INQ
-    moveq.l #1, %D0
-    move.l #'b', %D1
-    jsr INQ
-    moveq.l #1, %D0
-    move.l #'c', %D1
-    jsr INQ
+    bra PUSH_LOOP
+END_PUSH_LOOP_INNER:
+    move.l #16, %D2
+    addq #1, %D3
+    cmpi #'q', %D3
+    beq END_PUSH_LOOP_OUTER
+    bra PUSH_LOOP
+END_PUSH_LOOP_OUTER:
 
     move.w #0xe10c, USTCNT1   | 送受信割り込み可能
     * move.w #0xe104, USTCNT1   | 送信割り込み可能
-
-    move.w #0x0800+'h', UTX1
-    move.w #0x0800+'l', UTX1
-    move.w #0x0800+'t', UTX1
-    move.w #0x0800+'\n', UTX1
 LOOP:
     bra LOOP
 
@@ -112,8 +114,6 @@ uart1_interrupt:
     cmpi.w #1, %D1                  | 0=FIFOが空ではない, 1=空である（割り込み発生）
     bne UART1_INTR_SKIP_PUT         | 送信割り込みでないならスキップ
     move.l #0, %D1                  | ch=%D1.L=0
-    move.w #0x0800+'t', UTX1
-    move.w #0x0800+'x', UTX1
     jsr INTERPUT
     bra UART1_INTR_END
 UART1_INTR_SKIP_PUT:

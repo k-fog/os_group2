@@ -60,7 +60,7 @@ INTERPUT:
 	/* (5) */
 	/* d1をUTX1に代入（下位８bit） */
 	ori #0x0800, %D1                | ヘッダを代入
-	move.w %D0, UTX1                | 送信
+	move.w %D1, UTX1                | 送信
 	bra	End_INTERPUT
 INTERPUT_MASK:
 	/* (4)' */
