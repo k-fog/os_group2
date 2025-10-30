@@ -31,18 +31,26 @@ END_SYSCALL_HNDR:
     rte
 
 GETSTRING:
-    move.l #1, LED0
-    rte
+    move.b #'G', LED7
+    move.b #'E', LED6
+    move.b #'T', LED5
+    rts
 
 PUTSTRING:
-    move.l #2, LED0
-    rte
+    move.b #'P', LED7
+    move.b #'U', LED6
+    move.b #'T', LED5
+    rts
 
 RESET_TIMER:
-    move.l #3, LED0
-    rte
+    move.b #'R', LED7
+    move.b #'S', LED6
+    move.b #'T', LED5
+    rts
 
 SET_TIMER:
-    move.l #4, LED0
-    rte
+    move.b #'S', LED7
+    move.b #'E', LED6
+    move.b #'T', LED5
+    rts
 

@@ -64,13 +64,12 @@ boot:
     move.w #0x0004, TCTL1   | restart, 割り込み不可,
     | システムクロックの 1/16 を単位として計時，
     | タイマ使用停止
+    jsr	Init_Q            | キューの初期化
 
     move.l #0xff3ffb, IMR | UART1の割り込みを許可
-    move.w #0x2000,%SR    | スーパーバイザモード・走行レベルは0
+    move.w #0x2000, %SR   | スーパーバイザモード・走行レベルは0
     bra MAIN
 
-/* 現段階での初期化ルーチンの正常動作を確認するため，最後に ’a’ を
- * 送信レジスタ UTX1 に書き込む．’a’ が出力されれば，OK. */
 .section .text
 .even
 MAIN:
@@ -80,24 +79,39 @@ MAIN:
     move.w #0x0800+'r', UTX1
     move.w #0x0800+'t', UTX1
     move.w #0x0800+'\n', UTX1
+    
+    move.l #16, %D2
+    moveq #'a', %D3
+PUSH_LOOP:
+    subq.w #1, %D2
+    blt END_PUSH_LOOP_INNER
+    moveq.l #1, %D0
+    move.l %D3, %D1
+    jsr INQ
+    bra PUSH_LOOP
+END_PUSH_LOOP_INNER:
+    move.l #16, %D2
+    addq #1, %D3
+    cmpi #'q', %D3
+    beq END_PUSH_LOOP_OUTER
+    bra PUSH_LOOP
+END_PUSH_LOOP_OUTER:
+
+    move.w #0xe10c, USTCNT1   | 送受信割り込み可能
+    * move.w #0xe104, USTCNT1   | 送信割り込み可能
 LOOP:
     bra LOOP
 
 /* 割り込みハンドラ */
 .include "syscall.s"
-
+.include "QUEUE.s"
 uart1_interrupt:
     movem.l %D0-%D7/%A0-%A6, -(%SP) | 使用するレジスタをスタックに保存
-    * clr.w %D0                       | D0をクリア
-    * move.w URX1, %D0                | 受信データをD0に格納
-    * ori #0x0800, %D0                | 送信データを用意
-    * move.w %D0, UTX1                | 送信
-
     move.w UTX1, %D0                | UTX1をD0レジスタにコピーし保存しておく
     move.w %D0, %D1                 | 計算用にD1レジスタにコピー
     lsr.w #8, %D1
     lsr.w #7, %D1                   | 15回右シフト（上位ビットは0埋め）
-    cmp.w #0, %D1                   | 0=FIFOが空ではない, 1=空である
+    cmpi.w #1, %D1                  | 0=FIFOが空ではない, 1=空である（割り込み発生）
     bne UART1_INTR_SKIP_PUT         | 送信割り込みでないならスキップ
     move.l #0, %D1                  | ch=%D1.L=0
     jsr INTERPUT
@@ -108,10 +122,12 @@ UART1_INTR_SKIP_PUT:
     lsr.w #8, %D3
     lsr.w #5, %D3                   | 13回右シフト（上位ビットは0埋め）
     and.w #0x1, %D3                 | 0bit目以外を0に
-    cmp.w #1, %D3                   | 0 = 受信 FIFO にデータがない．1 = データがある
+    cmpi.w #1, %D3                  | 0 = 受信 FIFO にデータがない．1 = データがある
     bne UART1_INTR_SKIP_GET
     clr.l %D1                       | ch = %D1.L = 0, (data = %D2.Bは代入済)
-    jsr INTERGET
+    move.w #0x0800+'r', UTX1
+    move.w #0x0800+'x', UTX1
+    * jsr INTERGET
 UART1_INTR_SKIP_GET:
 UART1_INTR_END:
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
@@ -124,7 +140,7 @@ tmr1_interrupt:
     cmp.w #0, %D0
     beq TMR1_END                    | TSTAT1 の第 0 ビットが 1 となっているかどうかをチェックする．0 ならば rte で復帰
     clr.w TSTAT1                    | TSTAT1 を 0 クリア
-    jsr CALL_RP
+    * jsr CALL_RP
 TMR1_END:
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
     rte
