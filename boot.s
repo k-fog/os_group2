@@ -80,27 +80,26 @@ MAIN:
     move.w #0x0800+'t', UTX1
     move.w #0x0800+'\n', UTX1
     
-    move.l #16, %D2
-    moveq #'a', %D3
-PUSH_LOOP:
-    subq.w #1, %D2
-    blt END_PUSH_LOOP_INNER
-    moveq.l #1, %D0
-    move.l %D3, %D1
-    jsr INQ
-    bra PUSH_LOOP
-END_PUSH_LOOP_INNER:
-    move.l #16, %D2
-    addq #1, %D3
-    cmpi #'q', %D3
-    beq END_PUSH_LOOP_OUTER
-    bra PUSH_LOOP
-END_PUSH_LOOP_OUTER:
+    move.l #0, %D1
+    move.l #TDATA1, %D2
+    move.l #16, %D3
+    jsr PUTSTRING
 
-    move.w #0xe10c, USTCNT1   | 送受信割り込み可能
-    * move.w #0xe104, USTCNT1   | 送信割り込み可能
+    move.l #0xFFFF, %D0
+EMPTY_LOOP:
+    subq.l #1, %D0
+    blt EMPTY_LOOP
+
 LOOP:
+    move.l #0, %D1
+    move.l #TDATA2, %D2
+    move.l #16, %D3
+    jsr PUTSTRING
     bra LOOP
+
+.section .data
+TDATA1: .ascii "0123456789ABCDEF"
+TDATA2: .ascii "klmnopqrstuvwxyz"
 
 /* 割り込みハンドラ */
 .include "syscall.s"

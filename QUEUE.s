@@ -83,15 +83,15 @@ End_INTERPUT:
 ** 出力  ：実際に送信したデータ数 sz → %D0.L
 	
 PUTSTRING:
-	movem.l %d1-%d4/%a0,-(%sp)
+	movem.l %d1-%d6/%a0,-(%sp)
 	/* (1) */
-	cmp	#0, %d1
+	cmpi #0, %d1
 	bne	End_PUTSTRING
 	/* (2) */
 	moveq	#0, %d4  /* d4 = sz = 0 */
 	movea.l	%d2, %a0 /* a0 = i = p */
 	/* (3) */
-	cmp	#0, %d3
+	cmpi #0, %d3
 	beq	PUTSTRING_10
 LOOP_PUTSTRING:	
 	/* (4) */
@@ -105,7 +105,7 @@ LOOP_PUTSTRING:
 	*d1 :8bitデータ
 	*出力：d0(失敗 0/ 成功 1 )
 	/* (6) */
-	cmp	#0, %d0
+	cmpi #0, %d0
 	beq	PUTSTRING_9
 	/* (7) */
 	addq	#1, %d4
@@ -121,7 +121,7 @@ PUTSTRING_10:
 	/* (10) */
 	move.l	%d4, %d0
 End_PUTSTRING:
-	movem.l (%sp)+, %d1-%d4/%a0
+	movem.l (%sp)+, %d1-%d6/%a0
 	rts
 ******************************************************************************************************
 

@@ -36,12 +36,6 @@ GETSTRING:
     move.b #'T', LED5
     rts
 
-PUTSTRING:
-    move.b #'P', LED7
-    move.b #'U', LED6
-    move.b #'T', LED5
-    rts
-
 RESET_TIMER:
     move.b #'R', LED7
     move.b #'S', LED6
