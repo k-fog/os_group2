@@ -88,7 +88,7 @@ MAIN:
     move.l #0xFFFF, %D0
 EMPTY_LOOP:
     subq.l #1, %D0
-    blt EMPTY_LOOP
+    bgt EMPTY_LOOP
 
 LOOP:
     move.l #0, %D1
