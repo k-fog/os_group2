@@ -80,30 +80,31 @@ MAIN:
     move.w #0x0800+'t', UTX1
     move.w #0x0800+'\n', UTX1
     
-    move.l #0, %D1
-    move.l #TDATA1, %D2
-    move.l #16, %D3
-    jsr PUTSTRING
-
-    move.l #0xFFFF, %D0
+LOOP:
+    move.l #0xFFFFF, %D0
 EMPTY_LOOP:
     subq.l #1, %D0
     bgt EMPTY_LOOP
 
-LOOP:
     move.l #0, %D1
-    move.l #TDATA2, %D2
-    move.l #16, %D3
+    move.l #WORK, %D2
+    move.l #256, %D3
+    jsr GETSTRING
+
+    move.l #0, %D1
+    move.l #WORK, %D2
+    move.l %D0, %D3
     jsr PUTSTRING
     bra LOOP
 
 .section .data
-TDATA1: .ascii "0123456789ABCDEF"
-TDATA2: .ascii "klmnopqrstuvwxyz"
+WORK: .ds.b 256
 
 /* 割り込みハンドラ */
 .include "syscall.s"
-.include "QUEUE.s"
+.include "queue.s"
+.include "interget.s"
+
 uart1_interrupt:
     movem.l %D0-%D7/%A0-%A6, -(%SP) | 使用するレジスタをスタックに保存
     move.w UTX1, %D0                | UTX1をD0レジスタにコピーし保存しておく
