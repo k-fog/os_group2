@@ -78,33 +78,38 @@ MAIN:
     move.w #0x0800+'a', UTX1
     move.w #0x0800+'r', UTX1
     move.w #0x0800+'t', UTX1
+    move.w #0x0800+'\r', UTX1
     move.w #0x0800+'\n', UTX1
     
-    move.l #16, %D2
-    moveq #'a', %D3
-PUSH_LOOP:
-    subq.w #1, %D2
-    blt END_PUSH_LOOP_INNER
-    moveq.l #1, %D0
-    move.l %D3, %D1
-    jsr INQ
-    bra PUSH_LOOP
-END_PUSH_LOOP_INNER:
-    move.l #16, %D2
-    addq #1, %D3
-    cmpi #'q', %D3
-    beq END_PUSH_LOOP_OUTER
-    bra PUSH_LOOP
-END_PUSH_LOOP_OUTER:
-
-    move.w #0xe10c, USTCNT1   | 送受信割り込み可能
-    * move.w #0xe104, USTCNT1   | 送信割り込み可能
 LOOP:
+    move.l #0x80300000, %D0
+EMPTY_LOOP:
+    subq.l #1, %D0
+    blt EMPTY_LOOP
+    move.w #0x0800+'.', UTX1
+
+    move.l #0, %D1
+    move.l #WORK, %D2
+    move.l #256, %D3
+    jsr GETSTRING
+
+    move.l #0, %D1
+    move.l #WORK, %D2
+    move.l %D0, %D3
+    jsr PUTSTRING
+
+    move.w #0x0800+'\r', UTX1
+    move.w #0x0800+'\n', UTX1
     bra LOOP
+
+.section .data
+WORK: .ds.b 256
 
 /* 割り込みハンドラ */
 .include "syscall.s"
-.include "QUEUE.s"
+.include "queue.s"
+.include "interget.s"
+
 uart1_interrupt:
     movem.l %D0-%D7/%A0-%A6, -(%SP) | 使用するレジスタをスタックに保存
     move.w UTX1, %D0                | UTX1をD0レジスタにコピーし保存しておく
@@ -115,7 +120,6 @@ uart1_interrupt:
     bne UART1_INTR_SKIP_PUT         | 送信割り込みでないならスキップ
     move.l #0, %D1                  | ch=%D1.L=0
     jsr INTERPUT
-    bra UART1_INTR_END
 UART1_INTR_SKIP_PUT:
     move.w URX1, %D3                | 受信レジスタ URX1 を %D3.W にコピー
     move.b %D3, %D2                 | %D3.W の下位 8bit(データ部分) を %D2.B にコピー
@@ -125,9 +129,7 @@ UART1_INTR_SKIP_PUT:
     cmpi.w #1, %D3                  | 0 = 受信 FIFO にデータがない．1 = データがある
     bne UART1_INTR_SKIP_GET
     clr.l %D1                       | ch = %D1.L = 0, (data = %D2.Bは代入済)
-    move.w #0x0800+'r', UTX1
-    move.w #0x0800+'x', UTX1
-    * jsr INTERGET
+    jsr INTERGET
 UART1_INTR_SKIP_GET:
 UART1_INTR_END:
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
