@@ -8,8 +8,6 @@ RESET_TIMER:
 	rts
 
 SET_TIMER:
-	move.w 50000, %D1 /*割り込み発生周期tをD1に入れる*/
-	/*move.l #TT, %D2*/ 
 	move.l %D2, task_p
 	move.w #206, TPRER1 /*カウンタ周波数を10000にする-> 周期0.1msec*/
 	move.w %D1, TCMP1

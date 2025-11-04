@@ -60,9 +60,15 @@ boot:
     * move.w #0xe104, USTCNT1   | 送信割り込み可能
     move.w #0x0038, UBAUD1  | baud rate = 230400 bps
 
+    /* タイマ関係の初期化 (割り込みレベルは 6 に固定されている) */
+    move.w #0x0004, TCTL1   | restart, 割り込み不可,
+                            | システムクロックの 1/16 を単位として計時，
+                            | タイマ使用停止
+
     jsr	Init_Q            | キューの初期化
 
-    move.l #0xff3ffb, IMR | UART1の割り込みを許可
+    * move.l #0xff3ffb, IMR | UART1の割り込みを許可
+    move.l #0xff3ff9, IMR | UART1,TIMERの割り込みを許可
     move.w #0x2000, %SR   | スーパーバイザモード・走行レベルは0
     bra MAIN
 
