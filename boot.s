@@ -72,7 +72,7 @@ boot:
     move.w #0x2000, %SR   | スーパーバイザモード・走行レベルは0
     bra MAIN
 
-.include "main.s"
+
 
 /* 割り込みハンドラ */
 .include "syscall.s"
@@ -115,5 +115,5 @@ tmr1_interrupt:
 TMR1_END:
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
     rte
-
+.include "main.s"
 .end
