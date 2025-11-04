@@ -29,16 +29,3 @@ syscall_handler:
 END_SYSCALL_HNDR:
     movem.l (%SP)+, %D1-%D7/%A0-%A6
     rte
-
-RESET_TIMER:
-    move.b #'R', LED7
-    move.b #'S', LED6
-    move.b #'T', LED5
-    rts
-
-SET_TIMER:
-    move.b #'S', LED7
-    move.b #'E', LED6
-    move.b #'T', LED5
-    rts
-

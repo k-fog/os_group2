@@ -109,6 +109,7 @@ WORK: .ds.b 256
 .include "syscall.s"
 .include "queue.s"
 .include "interget.s"
+.include "timer.s"
 
 uart1_interrupt:
     movem.l %D0-%D7/%A0-%A6, -(%SP) | 使用するレジスタをスタックに保存
@@ -131,7 +132,6 @@ UART1_INTR_SKIP_PUT:
     clr.l %D1                       | ch = %D1.L = 0, (data = %D2.Bは代入済)
     jsr INTERGET
 UART1_INTR_SKIP_GET:
-UART1_INTR_END:
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
     rte
 
@@ -142,7 +142,7 @@ tmr1_interrupt:
     cmp.w #0, %D0
     beq TMR1_END                    | TSTAT1 の第 0 ビットが 1 となっているかどうかをチェックする．0 ならば rte で復帰
     clr.w TSTAT1                    | TSTAT1 を 0 クリア
-    * jsr CALL_RP
+    jsr CALL_RP
 TMR1_END:
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
     rte
