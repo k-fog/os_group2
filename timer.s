@@ -1,0 +1,29 @@
+	.section.bss
+task_p:	.ds.b 4 /*タイマ割り込みで実行するプログラムの先頭アドレスを格納*/
+	.secton.text
+	/*タイマルーチン*/
+RESET_TIMER:
+	move.w #0x0004, TCTL1
+	rts
+SET_TIMER:
+	move.w 50000, %D1 /*割り込み発生周期tをD1に入れる*/
+	move.l #TT, %D2 /*割り込みベクタから割り込み時に起動するルーチンをD2に持ってくる*/
+	move.l %D2, task_p
+	move.w #206, TPRER1 /*カウンタ周波数を10000にする-> 周期0.1msec*/
+	move.w %D1, TCMP1
+	move.w #0x0015, TCTL1 /*比較割り込み許可, 1/16周期, タイマ許可*/
+	rts
+CALL_RP:
+	move.l task_p, %A0
+	jsr  (%A0)
+	rts
+
+/*5秒ごとにTIMERを表示。*/
+TT:
+
+	move.w #'T'+0x0800, UTX1 | 'T'を送信してタイマ動作確認
+	move.w #'I'+0x0800, UTX1
+	move.w #'M'+0x0800, UTX1
+	move.w #'E'+0x0800, UTX1
+	move.w #'R'+0x0800, UTX1
+	
