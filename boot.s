@@ -78,13 +78,15 @@ MAIN:
     move.w #0x0800+'a', UTX1
     move.w #0x0800+'r', UTX1
     move.w #0x0800+'t', UTX1
+    move.w #0x0800+'\r', UTX1
     move.w #0x0800+'\n', UTX1
     
 LOOP:
-    move.l #0xFFFFF, %D0
+    move.l #0x80300000, %D0
 EMPTY_LOOP:
     subq.l #1, %D0
-    bgt EMPTY_LOOP
+    blt EMPTY_LOOP
+    move.w #0x0800+'.', UTX1
 
     move.l #0, %D1
     move.l #WORK, %D2
@@ -95,6 +97,9 @@ EMPTY_LOOP:
     move.l #WORK, %D2
     move.l %D0, %D3
     jsr PUTSTRING
+
+    move.w #0x0800+'\r', UTX1
+    move.w #0x0800+'\n', UTX1
     bra LOOP
 
 .section .data
@@ -115,7 +120,6 @@ uart1_interrupt:
     bne UART1_INTR_SKIP_PUT         | 送信割り込みでないならスキップ
     move.l #0, %D1                  | ch=%D1.L=0
     jsr INTERPUT
-    bra UART1_INTR_END
 UART1_INTR_SKIP_PUT:
     move.w URX1, %D3                | 受信レジスタ URX1 を %D3.W にコピー
     move.b %D3, %D2                 | %D3.W の下位 8bit(データ部分) を %D2.B にコピー
@@ -125,9 +129,7 @@ UART1_INTR_SKIP_PUT:
     cmpi.w #1, %D3                  | 0 = 受信 FIFO にデータがない．1 = データがある
     bne UART1_INTR_SKIP_GET
     clr.l %D1                       | ch = %D1.L = 0, (data = %D2.Bは代入済)
-    move.w #0x0800+'r', UTX1
-    move.w #0x0800+'x', UTX1
-    * jsr INTERGET
+    jsr INTERGET
 UART1_INTR_SKIP_GET:
 UART1_INTR_END:
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
