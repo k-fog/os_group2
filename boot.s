@@ -60,50 +60,13 @@ boot:
     * move.w #0xe104, USTCNT1   | 送信割り込み可能
     move.w #0x0038, UBAUD1  | baud rate = 230400 bps
 
-    /* タイマ関係の初期化 (割り込みレベルは 6 に固定されている) */
-    move.w #0x0004, TCTL1   | restart, 割り込み不可,
-    | システムクロックの 1/16 を単位として計時，
-    | タイマ使用停止
     jsr	Init_Q            | キューの初期化
 
     move.l #0xff3ffb, IMR | UART1の割り込みを許可
     move.w #0x2000, %SR   | スーパーバイザモード・走行レベルは0
     bra MAIN
 
-.section .text
-.even
-MAIN:
-    move.w #0x0800+'s', UTX1
-    move.w #0x0800+'t', UTX1
-    move.w #0x0800+'a', UTX1
-    move.w #0x0800+'r', UTX1
-    move.w #0x0800+'t', UTX1
-    move.w #0x0800+'\r', UTX1
-    move.w #0x0800+'\n', UTX1
-    
-LOOP:
-    move.l #0x80300000, %D0
-EMPTY_LOOP:
-    subq.l #1, %D0
-    blt EMPTY_LOOP
-    move.w #0x0800+'.', UTX1
-
-    move.l #0, %D1
-    move.l #WORK, %D2
-    move.l #256, %D3
-    jsr GETSTRING
-
-    move.l #0, %D1
-    move.l #WORK, %D2
-    move.l %D0, %D3
-    jsr PUTSTRING
-
-    move.w #0x0800+'\r', UTX1
-    move.w #0x0800+'\n', UTX1
-    bra LOOP
-
-.section .data
-WORK: .ds.b 256
+.include "main.s"
 
 /* 割り込みハンドラ */
 .include "syscall.s"
