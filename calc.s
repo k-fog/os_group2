@@ -83,7 +83,10 @@ READ_LOOP:
     bra READ_LOOP
 
 READ_LOOP_END:
-    jsr EVAL   | -> RESULT
+    lea.l INPUT_BUF, %A1  | %A1 = buffer head
+    jsr EVAL  | -> RESULT
+    move.l %D0, %D1
+    movea.l %A0, %A1
     jsr PRINT  | -> output
     bra CALC_MAIN
 
@@ -103,7 +106,7 @@ _STRTOL:
         src++;
     }
 */
-    movem.l %D1-%D2, -(%SP)
+    movem.l %D1-%D2/%A1, -(%SP)
 
     clr.l %D0
     move.l #10, %D2
@@ -118,10 +121,27 @@ _STRTOL_WHILE:
     add.l %D1, %D0
     bra _STRTOL_WHILE
 _STRTOL_END:
-    movem.l (%SP)+, %D1-%D2
+    movea.l %A1, %A0
+    movem.l (%SP)+, %D1-%D2/%A1
     rts
 
+/*
+ * _LTOSTR: integer to string
+ * %A1: address of buffer
+ * %D1.L: integer
+ * %D2.L: buffer size
+ * %D0.L: return value; data count
+ */
 _LTOSTR:
+    movem.l %D1/%A1, -(%SP)
+
+    | tmp
+    addi.b #'0', %D1
+    move.b %D1, (%A1)
+    moveq.l #1, %D0
+
+    movem.l (%SP)+, %D1/%A1
+    rts
 
 /*
  * EVAL: evaluate source code
@@ -129,27 +149,50 @@ _LTOSTR:
  * %D0: return value
  */
 EVAL:
-    move.b #'0', RESULT
+    jsr _STRTOL
     rts
 
 /*
  * PRINT: print the result
- * %A1: source code
- * %D0: result
+ * %A1: end of source code
+ * %D1: result
  */
 PRINT:
+    movem.l %D0-%D3/%A0-%A2, -(%SP)
+    movea.l %A1, %A2 | %A2 = end
+    move.l %D1, %D3  | %D3 = result
     jsr _NEWLINE
-    move.l %A1, %D1
-    subi.l #INPUT_BUF, %D1
+
+    /* print "(" */
+    lea.l PAREN_L, %A1
+    move.l #1, %D1
+    jsr _PRINT
+
+    /* print source code */
+    move.l %A2, %D1
+    subi.l #INPUT_BUF+1, %D1
     lea.l INPUT_BUF, %A1
-    jsr _PRINT           | print source code
+    jsr _PRINT
+
+    /* print ")" */
+    lea.l PAREN_R, %A1
+    move.l #1, %D1
+    jsr _PRINT
+
+    /* print equal " = " */
     lea.l EQUAL, %A1
     move.l #3, %D1
-    jsr _PRINT           | print equal " = "
-    lea.l RESULT, %A1
-    move.l #1, %D1
-    jsr _PRINT           | print result
+    jsr _PRINT
+
+    /* print the result */
+    lea.l RESULT_BUF, %A1
+    move.l %D3, %D1
+    move.l #RESULT_BUF_SIZE, %D2
+    jsr _LTOSTR
+    move.l %D0, %D1
+    jsr _PRINT
     jsr _NEWLINE
+    movem.l (%SP)+, %D0-%D3/%A0-%A2
     rts
 
 .section .data
@@ -158,6 +201,12 @@ PROMPT:
     .even
 EQUAL:
     .ascii " = "
+    .even
+PAREN_L:
+    .ascii "("
+    .even
+PAREN_R:
+    .ascii ")"
     .even
 CRLF:
     .ascii "\r\n"
