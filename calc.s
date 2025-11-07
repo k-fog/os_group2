@@ -166,6 +166,19 @@ _LTOSTR_BREAK_1:
 
 
 /*
+ * _SKIP_SPACE
+ * %A1: string
+ */
+_SKIP_SPACE:
+    cmpi.b #' ', (%A1)
+    bne _SKIP_SPACE_END
+    adda.l #1, %A1
+    bra _SKIP_SPACE
+_SKIP_SPACE_END:
+    rts
+
+
+/*
  * _PUSH: push to stack
  * %D1.L: data to push
  */
@@ -197,19 +210,24 @@ _POP:
     rts
 
 
+_RESET_STACK:
+    move.l #0, (STACK_TOP)
+    rts
+
+
 /*
  * calc_main: main routine
  */
-calc_main:
-    lea.l prompt, %a1
+CALC_MAIN:
+    lea.l PROMPT, %a1
     move.l #2, %d1
-    jsr _print           | print prompt "> "
+    jsr _PRINT           | print PROMPT "> "
 
-    lea.l input_buf, %a1 | %a1 = buffer head
-read_loop:
-    jsr _read_one_char
+    lea.l INPUT_BUF, %a1 | %a1 = buffer head
+READ_LOOP:
+    jsr _READ_ONE_CHAR
     cmpi.l #0, %d0       | if <num of read char> == 0 then loop
-    beq read_loop
+    beq READ_LOOP
 
     move.b (%A1), %D0
     cmpi.b #'\r', %D0
@@ -225,6 +243,8 @@ READ_LOOP_END:
     move.l %D0, %D1
     movea.l %A0, %A1
     jsr PRINT  | -> output
+
+    jsr _RESET_STACK
     bra CALC_MAIN
 
 
@@ -234,7 +254,93 @@ READ_LOOP_END:
  * %D0: return value
  */
 EVAL:
+/*
+    while (*A1 != '\r') {
+        skip_space(A1)
+        if (*A1 == '+') {
+            int x = pop();
+            int y = pop();
+            int ans = x + y;
+            push(ans);
+        } else if (*A1 == '-') {
+            int x = pop();
+            int y = pop();
+            int ans = x - y;
+            push(ans);
+        // * /
+        } else {
+            D0 = strtol(A1);
+            push(D0);
+        }
+    }
+    D0 = pop();
+*/
+    movem.l %D1-%D2/%A1, -(%SP)
+EVAL_WHILE:
+    jsr _SKIP_SPACE
+    cmpi.b #'\r', (%A1)
+    beq EVAL_WHILE_END
+    cmpi.b #'+', (%A1)
+    beq EVAL_PLUS
+    cmpi.b #'-', (%A1)
+    beq EVAL_MINUS
+    cmpi.b #'*', (%A1)
+    beq EVAL_MUL
+    cmpi.b #'/', (%A1)
+    beq EVAL_DIV
+    cmpi.b #'0', (%A1)
+    bcs EVAL_END | error
+    cmpi.b #'9', (%A1)
+    bhi EVAL_END | error
+    bra EVAL_VAL
+    | TODO: minus value
+EVAL_PLUS:
+    adda.l #1, %A1
+    jsr _POP
+    move.l %D0, %D2
+    jsr _POP
+    move.l %D0, %D1
+    add.l %D2, %D1
+    jsr _PUSH
+    bra EVAL_WHILE
+EVAL_MINUS:
+    adda.l #1, %A1
+    jsr _POP
+    move.l %D0, %D2
+    jsr _POP
+    move.l %D0, %D1
+    sub.l %D2, %D1
+    jsr _PUSH
+    bra EVAL_WHILE
+EVAL_MUL:
+    adda.l #1, %A1
+    jsr _POP
+    move.l %D0, %D2
+    jsr _POP
+    move.l %D0, %D1
+    muls %D2, %D1
+    jsr _PUSH
+    bra EVAL_WHILE
+EVAL_DIV:
+    adda.l #1, %A1
+    jsr _POP
+    move.l %D0, %D2
+    jsr _POP
+    move.l %D0, %D1
+    divs %D2, %D1
+    andi.l #0x0000FFFF, %D1
+    jsr _PUSH
+    bra EVAL_WHILE
+EVAL_VAL:
     jsr _STRTOL
+    move.l %D0, %D1
+    jsr _PUSH
+    movea.l %A0, %A1
+    bra EVAL_WHILE
+EVAL_WHILE_END:
+    jsr _POP
+EVAL_END:
+    movem.l (%SP)+, %D1-%D2/%A1
     rts
 
 
@@ -245,30 +351,8 @@ EVAL:
  */
 PRINT:
     movem.l %D0-%D3/%A0-%A2, -(%SP)
-    movea.l %A1, %A2 | %A2 = end
     move.l %D1, %D3  | %D3 = result
     jsr _NEWLINE
-
-    /* print "(" */
-    lea.l PAREN_L, %A1
-    move.l #1, %D1
-    jsr _PRINT
-
-    /* print source code */
-    move.l %A2, %D1
-    subi.l #INPUT_BUF+1, %D1
-    lea.l INPUT_BUF, %A1
-    jsr _PRINT
-
-    /* print ")" */
-    lea.l PAREN_R, %A1
-    move.l #1, %D1
-    jsr _PRINT
-
-    /* print equal " = " */
-    lea.l EQUAL, %A1
-    move.l #3, %D1
-    jsr _PRINT
 
     /* print the result */
     lea.l RESULT_BUF, %A1
