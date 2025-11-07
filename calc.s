@@ -18,6 +18,7 @@ _READ_ONE_CHAR:
     movem.l (%SP)+, %D1-%D3
     rts
 
+
 /*
  * _PRINT_ONE_CHAR
  * %A1: address of the buffer.
@@ -31,6 +32,7 @@ _PRINT_ONE_CHAR:
     trap #0
     movem.l (%SP)+, %D0-%D3
     rts
+
 
 /*
  * _PRINT
@@ -47,6 +49,7 @@ _PRINT:
     movem.l (%SP)+, %D0-%D3
     rts
 
+
 /*
  * _NEWLINE
  */
@@ -59,36 +62,6 @@ _NEWLINE:
     trap #0
     movem.l (%SP)+, %D0-%D3
     rts
-
-/*
- * CALC_MAIN: main routine
- */
-CALC_MAIN:
-    lea.l PROMPT, %A1
-    move.l #2, %D1
-    jsr _PRINT           | print prompt "> "
-
-    lea.l INPUT_BUF, %A1 | %A1 = buffer head
-READ_LOOP:
-    jsr _READ_ONE_CHAR
-    cmpi.l #0, %D0       | if <num of read char> == 0 then loop
-    beq READ_LOOP
-
-    move.b (%A1), %D0
-    cmpi.b #'\r', %D0
-    beq READ_LOOP_END    | if <read char> == '\r' then break
-
-    jsr _PRINT_ONE_CHAR
-    addq.l #1, %A1
-    bra READ_LOOP
-
-READ_LOOP_END:
-    lea.l INPUT_BUF, %A1  | %A1 = buffer head
-    jsr EVAL  | -> RESULT
-    move.l %D0, %D1
-    movea.l %A0, %A1
-    jsr PRINT  | -> output
-    bra CALC_MAIN
 
 
 /*
@@ -125,23 +98,102 @@ _STRTOL_END:
     movem.l (%SP)+, %D1-%D2/%A1
     rts
 
+
 /*
  * _LTOSTR: integer to string
  * %A1: address of buffer
  * %D1.L: integer
- * %D2.L: buffer size
+ * //TODO %D2.L: buffer size
  * %D0.L: return value; data count
  */
 _LTOSTR:
-    movem.l %D1/%A1, -(%SP)
+/*
+    int val = D1
+    int count = D2
+    if (val < 0) {
+        *A1++ = '-';
+        val = -val;
+    }
+    int div = 1;
+    while (10 <= val / div) div *= 10;
+    while (0 < div && 0 < count) {
+        int tmp = val / div;
+        tmp += '0';
+        *A1++ = tmp;
+        val %= div;
+        div /= 10;
+        count--;
+    }
+*/
+    movem.l %D1-%D4/%A1-%A2, -(%SP)
 
-    | tmp
-    addi.b #'0', %D1
-    move.b %D1, (%A1)
-    moveq.l #1, %D0
+    | %D1(val), %D2(count), %A2(buf_head)
+    movea.l %A1, %A2
+    cmpi.l #0, %D1   | check val < 0
+    bge _LTOSTR_SKIP_REVERSE
+    move.b #'-', (%A1)+
+    neg.l %D1
+_LTOSTR_SKIP_REVERSE:
 
-    movem.l (%SP)+, %D1/%A1
+    move.w #1, %D3   | %D3.W(div) = 1
+_LTOSTR_WHILE_0:
+    move.l %D1, %D4  | %D4(val_tmp) = val
+    divu %D3, %D4    | val_tmp /= div
+    cmpi.w #10, %D4  | check 10 <= val_tmp
+    bcs _LTOSTR_BREAK_0
+    mulu #10, %D3
+    bra _LTOSTR_WHILE_0
+_LTOSTR_BREAK_0:
+_LTOSTR_WHILE_1:
+    cmpi.w #0, %D3   | check 0 < div
+    bls _LTOSTR_BREAK_1
+    move.l %D1, %D4  | %D4(tmp) = val
+    divu %D3, %D4    | tmp /= div
+    addi.b #'0', %D4 | tmp += '0'
+    move.b %D4, (%A1)+
+    lsr.l #8, %D4
+    lsr.l #8, %D4    | tmp = val % div
+    move.l %D4, %D1  | val = tmp = val % div
+    divu #10, %D3    | div /= 10
+    bra _LTOSTR_WHILE_1
+_LTOSTR_BREAK_1:
+    clr.l %D0
+    suba.l %A2, %A1  | %A1 -= %A2(buf_head)
+    move.l %A1, %D0
+    movem.l (%SP)+, %D1-%D4/%A1-%A2
     rts
+
+
+/*
+ * CALC_MAIN: main routine
+ */
+CALC_MAIN:
+    lea.l PROMPT, %A1
+    move.l #2, %D1
+    jsr _PRINT           | print prompt "> "
+
+    lea.l INPUT_BUF, %A1 | %A1 = buffer head
+READ_LOOP:
+    jsr _READ_ONE_CHAR
+    cmpi.l #0, %D0       | if <num of read char> == 0 then loop
+    beq READ_LOOP
+
+    move.b (%A1), %D0
+    cmpi.b #'\r', %D0
+    beq READ_LOOP_END    | if <read char> == '\r' then break
+
+    jsr _PRINT_ONE_CHAR
+    addq.l #1, %A1
+    bra READ_LOOP
+
+READ_LOOP_END:
+    lea.l INPUT_BUF, %A1  | %A1 = buffer head
+    jsr EVAL  | -> RESULT
+    move.l %D0, %D1
+    movea.l %A0, %A1
+    jsr PRINT  | -> output
+    bra CALC_MAIN
+
 
 /*
  * EVAL: evaluate source code
@@ -151,6 +203,7 @@ _LTOSTR:
 EVAL:
     jsr _STRTOL
     rts
+
 
 /*
  * PRINT: print the result
@@ -194,6 +247,7 @@ PRINT:
     jsr _NEWLINE
     movem.l (%SP)+, %D0-%D3/%A0-%A2
     rts
+
 
 .section .data
 PROMPT:
