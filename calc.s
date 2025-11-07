@@ -2,6 +2,7 @@
 
 .equ BUF_SIZE, 256
 .equ RESULT_BUF_SIZE, 16
+.equ STACK_SIZE, 16
 
 /*
  * _READ_ONE_CHAR
@@ -165,18 +166,50 @@ _LTOSTR_BREAK_1:
 
 
 /*
- * CALC_MAIN: main routine
+ * _PUSH: push to stack
+ * %D1.L: data to push
  */
-CALC_MAIN:
-    lea.l PROMPT, %A1
-    move.l #2, %D1
-    jsr _PRINT           | print prompt "> "
+_PUSH:
+    movem.l %D2/%A1, -(%SP)
+    lea.l STACK, %A1
+    move.l (STACK_TOP), %D2
+    mulu #4, %D2
+    adda.l %D2, %A1
+    move.l %D1, (%A1)
+    addi.l #1, (STACK_TOP)
+    movem.l (%SP)+, %D2/%A1
+    rts
 
-    lea.l INPUT_BUF, %A1 | %A1 = buffer head
-READ_LOOP:
-    jsr _READ_ONE_CHAR
-    cmpi.l #0, %D0       | if <num of read char> == 0 then loop
-    beq READ_LOOP
+
+/*
+ * _POP: pop from stack
+ * %D0.L: data
+ */
+_POP:
+    movem.l %D2/%A1, -(%SP)
+    lea.l STACK, %A1
+    subi.l #1, (STACK_TOP)
+    move.l (STACK_TOP), %D2
+    mulu #4, %D2
+    adda.l %D2, %A1
+    move.l (%A1), %D0
+    movem.l (%SP)+, %D2/%A1
+    rts
+
+
+/*
+ * calc_main: main routine
+ */
+calc_main:
+    lea.l prompt, %a1
+    move.l #2, %d1
+    jsr _print           | print prompt "> "
+
+    lea.l input_buf, %a1 | %a1 = buffer head
+read_loop:
+    jsr _read_one_char
+    cmpi.l #0, %d0       | if <num of read char> == 0 then loop
+    beq read_loop
 
     move.b (%A1), %D0
     cmpi.b #'\r', %D0
@@ -265,6 +298,10 @@ PAREN_R:
 CRLF:
     .ascii "\r\n"
     .even
+STACK_TOP:
+    .dc.l 0
+    .even
+
 
 .section .bss
 INPUT_BUF:
@@ -272,4 +309,7 @@ INPUT_BUF:
     .even
 RESULT_BUF:
     .ds.b RESULT_BUF_SIZE
+    .even
+STACK:
+    .ds.l STACK_SIZE
     .even
