@@ -40,7 +40,8 @@ end_Init:
 
 
 ******INTERPUT*************************************************************************************
-** 入力：d1.l（チャンネル）	
+** 入力：d1.l（チャンネル）
+** チャネル ch の送信キューからデータを一つ取り出し，実際に送信	
 INTERPUT:
 	movem.l %d0-%d2,-(%sp)
 	
@@ -48,26 +49,25 @@ INTERPUT:
 	move.w  #0x2700, %sr
 	/* (2) */
 	cmpi #0, %d1
-	bne	End_INTERPUT
+	bne	End_INTERPUT		|ch=0以外なら何もしない
 	/* (3) */
 	moveq	#1, %d0
-	jsr	OUTQ
+	jsr	OUTQ			|送信キューからデータを一つ取り出し
 	*出力１：d0(失敗 0/ 成功 1 )
 	*出力２：d1（取り出した8bitデータ）
 	/* (4) */
 	cmpi #0, %d0
-	beq	INTERPUT_MASK
+	beq	INTERPUT_MASK		|取り出し失敗なら、送信割り込みをマスク（禁止）
 	/* (5) */
 	/* d1をUTX1に代入（下位８bit） */
 	ori #0x0800, %D1                | ヘッダを代入
 	move.w %D1, UTX1                | 送信
 	bra	End_INTERPUT
 INTERPUT_MASK:
-	/* (4)' */
-	/* マスク操作 */
+	/* (4)' */		|送信失敗した場合、送信割り込み禁止
 	move.w	USTCNT1, %d2
-	andi.w	#0xFFFB, %d2	/* 0xFFFB = 1111111111111011 */
-	move.w	%d2,	USTCNT1 /* 送信失敗した場合、USTCNT1のTXEEを0にする */
+	andi.w	#0xFFFB, %d2	| 0xFFFB = 1111111111111011 
+	move.w	%d2,	USTCNT1 | USTCNT1のTXEEを0にする 
 	bra End_INTERPUT
 End_INTERPUT:
 	movem.l (%sp)+, %d0-%d2
