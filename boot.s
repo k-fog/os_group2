@@ -22,6 +22,7 @@
 .equ UTX1, REGBASE+0x906    | UART1 送信レジスタ
 
 /* LED */
+/*ここで指定されたアドレスに表示させたい数字やマークの情報を入れることでLED表示を変更できる(室原)*/
 .equ LED7, IOBASE+0x000002f | ボード搭載の LED 用レジスタ
 .equ LED6, IOBASE+0x000002d | 使用法については付録 A.4.3.1
 .equ LED5, IOBASE+0x000002b
@@ -110,7 +111,8 @@ tmr1_interrupt:
     move.w TSTAT1, %D0              | %D0=TSTAT1
     and.w #0x1, %D0                 | 0bit目以外を0に
     cmp.w #0, %D0
-    beq TMR1_END                    | TSTAT1 の第 0 ビットが 1 となっているかどうかをチェックする．0 ならば rte で復帰
+    beq TMR1_END                    | TSTAT1 の第 0 ビットが 1 となっているかどうかをチェックする．0 ならば rte で復帰 
+    /*TASTAT1の第0ビットが0のときはコンペアイベントが起きていないためタイマ割り込みは起きてない, よって終了処理に移る->今回のタイマはコンペアイベントのみしか使わないため第0ビットだけ調べればよい(室原)*/
     clr.w TSTAT1                    | TSTAT1 を 0 クリア
     jsr CALL_RP
 TMR1_END:
