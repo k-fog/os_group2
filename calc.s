@@ -167,13 +167,14 @@ _LTOSTR_WHILE_1:
     cmpi.w #0, %D3   | check 0 < div
     bls _LTOSTR_BREAK_1
     move.l %D1, %D4  | %D4(tmp) = val
-    divu %D3, %D4    | tmp /= div
+    divu %D3, %D4    | tmp /= div, remainder in upper 16 bits
+    swap %D4         | swap to get remainder in lower 16 bits
+    move.w %D4, %D1  | %D1 = val % div (remainder)
+    swap %D4         | swap back to get quotient
     addi.b #'0', %D4 | tmp += '0'
     move.b %D4, (%A1)+
-    lsr.l #8, %D4
-    lsr.l #8, %D4    | tmp = val % div
-    move.l %D4, %D1  | val = tmp = val % div
-    divu #10, %D3    | div /= 10
+    divu #10, %D3    | div /= 10, quotient in lower 16 bits, remainder in upper 16 bits
+    andi.l #0x0000FFFF, %D3 | clear upper 16 bits (remainder), keep only quotient
     bra _LTOSTR_WHILE_1
 _LTOSTR_BREAK_1:
     clr.l %D0
