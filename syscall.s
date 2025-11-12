@@ -1,6 +1,6 @@
 
 .section .text
-
+/*D0の値で呼び出すサブルーチンを決めている。ここでは何を呼び出しているかを分かりやすくするためにシンボルに数値を定義している(室原)*/
 .equ SYSCALL_NUM_GETSTRING,   1 |文字列入力（GETSTRING）（ここからコメント鴻上）|
 .equ SYSCALL_NUM_PUTSTRING,   2 |文字列出力(PUTSTRING)|
 .equ SYSCALL_NUM_RESET_TIMER, 3 |タイマリセット|
@@ -39,7 +39,7 @@ END_SYSCALL_HNDR:
 **********
 **各システムコール処理の分岐先
 *********	
-	
+/*各サブルーチンを呼び出すための場所、サブルーチン呼出し後はシステムコールハンドラーの終了処理に移る(室原)*/	
 CALL_GETSTRING:
 	jsr GETSTRING
 	bra END_SYSCALL_HNDR
