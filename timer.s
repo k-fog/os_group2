@@ -15,6 +15,6 @@ SET_TIMER:
 	rts
 
 CALL_RP:
-	movea.l task_p, %A0
+	movea.l task_p, %A0 /*task_pを使ってジャンプできないためA0レジスタにアドレスを入れてサブルーチンにジャンプさせる*/
 	jsr  (%A0)
 	rts
