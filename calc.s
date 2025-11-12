@@ -85,11 +85,12 @@ _STRTOL:
     clr.l %D0
     move.l #10, %D2
 _STRTOL_WHILE:
-    move.b (%A1)+, %D1 | %D1 = *src
+    move.b (%A1), %D1 | %D1 = *src
     cmpi.b #'0', %D1
     bcs _STRTOL_END
     cmpi.b #'9', %D1
     bhi _STRTOL_END
+    adda.l #1, %A1
     mulu.w %D2, %D0  | %D0 *= 10
     subi.b #'0', %D1 | %D1 -= '0'
     add.l %D1, %D0
@@ -258,94 +259,64 @@ READ_LOOP_END:
  * %D0: return value
  */
 EVAL:
-/*
-    while (*A1 != '\r') {
-        skip_space(A1)
-        if (*A1 == '+') {
-            int x = pop();
-            int y = pop();
-            int ans = x + y;
-            push(ans);
-        } else if (*A1 == '-') {
-            int x = pop();
-            int y = pop();
-            int ans = x - y;
-            push(ans);
-        // * /
-        } else {
-            D0 = strtol(A1);
-            push(D0);
-        }
-    }
-    D0 = pop();
-*/
-    movem.l %D1-%D2/%A1, -(%SP)
+    movem.l %D1-%D3/%A1, -(%SP)
 EVAL_WHILE:
     jsr _SKIP_SPACE
     cmpi.b #'\r', (%A1)
     beq EVAL_WHILE_END
-    cmpi.b #'+', (%A1)
-    beq EVAL_PLUS
-    cmpi.b #'-', (%A1)
-    beq EVAL_MINUS
-    cmpi.b #'*', (%A1)
-    beq EVAL_MUL
-    cmpi.b #'/', (%A1)
-    beq EVAL_DIV
-    cmpi.b #'0', (%A1)
-    bcs EVAL_END | error
-    cmpi.b #'9', (%A1)
-    bhi EVAL_END | error
-    bra EVAL_VAL
-    | TODO: minus value
-EVAL_PLUS:
-    adda.l #1, %A1
-    jsr _POP
-    move.l %D0, %D2
-    jsr _POP
-    move.l %D0, %D1
-    add.l %D2, %D1
-    jsr _PUSH
-    bra EVAL_WHILE
-EVAL_MINUS:
-    adda.l #1, %A1
-    jsr _POP
-    move.l %D0, %D2
-    jsr _POP
-    move.l %D0, %D1
-    sub.l %D2, %D1
-    jsr _PUSH
-    bra EVAL_WHILE
-EVAL_MUL:
-    adda.l #1, %A1
-    jsr _POP
-    move.l %D0, %D2
-    jsr _POP
-    move.l %D0, %D1
-    muls %D2, %D1
-    jsr _PUSH
-    bra EVAL_WHILE
-EVAL_DIV:
-    adda.l #1, %A1
-    jsr _POP
-    move.l %D0, %D2
-    jsr _POP
-    move.l %D0, %D1
-    divs %D2, %D1
-    andi.l #0x0000FFFF, %D1
-    jsr _PUSH
-    bra EVAL_WHILE
 EVAL_VAL:
     jsr _STRTOL
+    cmpa.l %A0, %A1
+    beq EVAL_NOT_VAL
     move.l %D0, %D1
     jsr _PUSH
     movea.l %A0, %A1
     bra EVAL_WHILE
+EVAL_NOT_VAL:
+    move.b (%A1)+, %D3
+    jsr _POP
+    move.l %D0, %D2
+    jsr _POP
+    move.l %D0, %D1
+
+    cmpi.b #'+', %D3
+    beq EVAL_PLUS
+    cmpi.b #'-', %D3
+    beq EVAL_MINUS
+    cmpi.b #'*', %D3
+    beq EVAL_MUL
+    cmpi.b #'/', %D3
+    beq EVAL_DIV
+    bra EVAL_ERR
+EVAL_PLUS:
+    add.l %D2, %D1
+    jsr _PUSH
+    bra EVAL_WHILE
+EVAL_MINUS:
+    sub.l %D2, %D1
+    jsr _PUSH
+    bra EVAL_WHILE
+EVAL_MUL:
+    muls %D2, %D1
+    jsr _PUSH
+    bra EVAL_WHILE
+EVAL_DIV:
+    divs %D2, %D1
+    andi.l #0x0000FFFF, %D1
+    jsr _PUSH
+    bra EVAL_WHILE
 EVAL_WHILE_END:
     jsr _POP
-EVAL_END:
-    movem.l (%SP)+, %D1-%D2/%A1
+    movem.l (%SP)+, %D1-%D3/%A1
     rts
+EVAL_ERR:
+    jsr _NEWLINE
+    lea.l ERR_MSG, %A1
+    move.l #5, %D1
+    jsr _PRINT
+    movem.l (%SP)+, %D1-%D3/%A1
+    rts
+    
 
 
 /*
@@ -374,14 +345,8 @@ PRINT:
 PROMPT:
     .ascii "> "
     .even
-EQUAL:
-    .ascii " = "
-    .even
-PAREN_L:
-    .ascii "("
-    .even
-PAREN_R:
-    .ascii ")"
+ERR_MSG:
+    .ascii "error\n"
     .even
 CRLF:
     .ascii "\r\n"
