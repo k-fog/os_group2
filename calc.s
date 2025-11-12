@@ -66,6 +66,23 @@ _NEWLINE:
 
 
 /*
+ * _CLEAR_BUF: clear INPUT_BUF
+ * %D1.L: buffer size
+ * %A1.L: buffer address
+ */
+_CLEAR_BUF:
+    movem.l %D1/%A1, -(%SP)
+_CLEAR_LOOP:
+    subi.l #1, %D1
+    blt _CLEAR_LOOP_END
+    move.b #0, (%A1)+
+    bra _CLEAR_LOOP
+_CLEAR_LOOP_END:
+    movem.l (%SP)+, %D1/%A1
+    rts
+
+
+/*
  * _STRTOL: string to integer (long)
  * %A1: address of string
  * %D0.L: integer
@@ -221,10 +238,9 @@ _RESET_STACK:
 
 
 /*
- * calc_main: main routine
+ * CALC_MAIN: main routine
  */
 CALC_MAIN:
-    jsr _RESET_STACK
     lea.l PROMPT, %a1
     move.l #2, %d1
     jsr _PRINT           | print PROMPT "> "
@@ -249,6 +265,14 @@ READ_LOOP_END:
     move.l %D0, %D1
     movea.l %A0, %A1
     jsr PRINT  | -> output
+
+    jsr _RESET_STACK
+    move.l #BUF_SIZE, %D1
+    lea.l INPUT_BUF, %A1
+    jsr _CLEAR_BUF
+    move.l #RESULT_BUF_SIZE, %D1
+    lea.l RESULT_BUF, %A1
+    jsr _CLEAR_BUF
 
     bra CALC_MAIN
 
