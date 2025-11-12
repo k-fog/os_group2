@@ -186,10 +186,9 @@ _PUSH:
     movem.l %D2/%A1, -(%SP)
     lea.l STACK, %A1
     move.l (STACK_TOP), %D2
-    mulu #4, %D2
     adda.l %D2, %A1
     move.l %D1, (%A1)
-    addi.l #1, (STACK_TOP)
+    addi.l #4, (STACK_TOP)
     movem.l (%SP)+, %D2/%A1
     rts
 
@@ -200,12 +199,17 @@ _PUSH:
  */
 _POP:
     movem.l %D2/%A1, -(%SP)
-    lea.l STACK, %A1
-    subi.l #1, (STACK_TOP)
+    clr.l %D0
     move.l (STACK_TOP), %D2
-    mulu #4, %D2
+    cmpi.l #0, %D2
+    beq _POP_SKIP
+
+    lea.l STACK, %A1
+    subi.l #4, (STACK_TOP)
+    move.l (STACK_TOP), %D2
     adda.l %D2, %A1
     move.l (%A1), %D0
+_POP_SKIP:
     movem.l (%SP)+, %D2/%A1
     rts
 
@@ -219,6 +223,7 @@ _RESET_STACK:
  * calc_main: main routine
  */
 CALC_MAIN:
+    jsr _RESET_STACK
     lea.l PROMPT, %a1
     move.l #2, %d1
     jsr _PRINT           | print PROMPT "> "
@@ -244,7 +249,6 @@ READ_LOOP_END:
     movea.l %A0, %A1
     jsr PRINT  | -> output
 
-    jsr _RESET_STACK
     bra CALC_MAIN
 
 
