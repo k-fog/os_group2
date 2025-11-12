@@ -23,13 +23,13 @@ LOOP_Init:				/* d4: 計算用 */
 
 	move.l	%a3,	TOP_OFS(%a0)	
 	move.l	%a3,	OUT_OFS(%a0)
-	move.l	%a3,	IN_OFS(%a0)
+	move.l	%a3,	IN_OFS(%a0)	/* TOP=OUT=IN=キューの先頭 */
 	
-	adda.l	#B_SIZE_MINUS,	%a3
-	move.l	%a3,	BOTTOM_OFS(%a0)
-	move.l	#0,	S_OFS(%a0)
+	adda.l	#B_SIZE_MINUS,	%a3	/* a3=255 */
+	move.l	%a3,	BOTTOM_OFS(%a0) /* BOTTOM=キューの末尾 */
+	move.l	#0,	S_OFS(%a0)	/* S = 0(キューの要素は最初０ */
 
-	addq	#1,	%d0
+	addq	#1,	%d0		/* Q1にも同様の操作 */
 	cmp	#2,	%d0
 	bne	LOOP_Init		/* キュー2つ分繰返し */
 	
