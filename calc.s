@@ -104,9 +104,9 @@ _STRTOL:
 _STRTOL_WHILE:
     move.b (%A1), %D1 | %D1 = *src
     cmpi.b #'0', %D1
-    bcs _STRTOL_END
+    blt _STRTOL_END
     cmpi.b #'9', %D1
-    bhi _STRTOL_END
+    bgt _STRTOL_END
     adda.l #1, %A1
     mulu.w %D2, %D0  | %D0 *= 10
     subi.b #'0', %D1 | %D1 -= '0'
@@ -159,7 +159,7 @@ _LTOSTR_WHILE_0:
     move.l %D1, %D4  | %D4(val_tmp) = val
     divu %D3, %D4    | val_tmp /= div
     cmpi.w #10, %D4  | check 10 <= val_tmp
-    bcs _LTOSTR_BREAK_0
+    blt _LTOSTR_BREAK_0
     mulu #10, %D3
     bra _LTOSTR_WHILE_0
 _LTOSTR_BREAK_0:
