@@ -128,17 +128,18 @@ End_PUTSTRING:
 
 	
 **********INQ**********************************************************************
-*d0 :キュー番号
-*d1 :8bitデータ
-*出力：d0(失敗 0/ 成功 1 )
+** 入力１：d0（キュー番号）
+** 入力２：d1（8bitデータ）
+** 出力　：d0(失敗 0/ 成功 1 )
 INQ:
 	/* (1) */
 	move.w %sr, -(%sp)
-	movem.l %d2-%d7/%a0-%a6,-(%sp) 
+	movem.l %d2-%d7/%a0-%a6,-(%sp)
 
 	/* (2) */
 	move.w #0x2700,%sr
 
+	** キューd0について、キュー情報の先頭・キューの先頭のアドレスをそれぞれ取得
 	******************************************************************************************
 	lea.l	Q_INFO, %a1		/* a1: Q_INFOの開始地点 */
 	lea.l	Q0_START, %a2 		/* a2: Q0の先頭番地 */
@@ -158,35 +159,35 @@ INQ:
 
 	/* (3) */
 	move.l	S_OFS(%a0), %d4
-	cmpi.l	#256, %d4
-	beq	INQ_Failure
+	cmpi.l	#256, %d4		| s==256?（満杯のキューに入れようとしているか？）
+	beq	INQ_Failure	
 	bra	INQ_Step1
 INQ_Failure:
 	moveq	#0, %d0
-	bra	END_INQ
+	bra	END_INQ			| 0（失敗）を出力し、終了
 INQ_Step1:
 	/* (4) */
-	move.l	IN_OFS(%a0), %a4
-	move.b	%d1, (%a4)
+	move.l	IN_OFS(%a0), %a4	| a4:キュー中、データを入れるべき番地
+	move.b	%d1, (%a4)		| m[in] = data
 
-	/* (5) */
-	movea.l	IN_OFS(%a0), %a4
-	movea.l	BOTTOM_OFS(%a0), %a5
-	cmpa.l	%a4, %a5
-	beq	BACK_IN
+	/* (5) */ ** inがキューの終端に来たら、循環させる
+	movea.l	IN_OFS(%a0), %a4	| a4 = in
+	movea.l	BOTTOM_OFS(%a0), %a5	| a5 = bottom
+	cmpa.l	%a4, %a5		| in == bottom?
+	beq	BACK_IN			
 	movea.l	IN_OFS(%a0), %a4
 	addq	#1, %a4
-	move.l	%a4, IN_OFS(%a0)
+	move.l	%a4, IN_OFS(%a0)	| in++
 	bra	INQ_Step2
 BACK_IN:
 	movea.l	TOP_OFS(%a0), %a4
-	move.l	%a4, IN_OFS(%a0)
+	move.l	%a4, IN_OFS(%a0)	| in = top
 INQ_Step2:
 	/* (6) */
 	move.l	S_OFS(%a0), %d4
-	addq.l	#1, %d4
-	move.l	%d4, S_OFS(%a0)
-	moveq	#1, %d0
+	addq.l	#1, %d4			
+	move.l	%d4, S_OFS(%a0)		| s++
+	moveq	#1, %d0			| d0 = 1（成功）
 	
 END_INQ:	
 	/* (7) */
