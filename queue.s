@@ -77,7 +77,8 @@ End_INTERPUT:
 ******************************************************************************************************	
 
 *********PUTSTRING************************************************************************************
-** 入力１： チャネル ch → %D1.L
+** データを送信キューに格納し，送信割り込みを開始	
+** 入力１：チャネル ch → %D1.L
 ** 入力２：データ読み込み先の先頭アドレス p → %D2.L
 ** 入力３：送信するデータ数 size → %D3.L
 ** 出力  ：実際に送信したデータ数 sz → %D0.L
@@ -85,41 +86,41 @@ End_INTERPUT:
 PUTSTRING:
 	movem.l %d1-%d6/%a0,-(%sp)
 	/* (1) */
-	cmpi #0, %d1
-	bne	End_PUTSTRING
+	cmpi 	#0, %d1		
+	bne	End_PUTSTRING	| ch=0以外なら何もしない
 	/* (2) */
-	moveq	#0, %d4  /* d4 = sz = 0 */
-	movea.l	%d2, %a0 /* a0 = i = p */
+	moveq	#0, %d4  	| d4 = sz = 0 
+	movea.l	%d2, %a0 	| a0 = i = p 
 	/* (3) */
-	cmpi #0, %d3
+	cmpi 	#0, %d3		| 送信サイズが０のとき
 	beq	PUTSTRING_10
 LOOP_PUTSTRING:	
 	/* (4) */
-	cmp	%d3, %d4
+	cmp	%d3, %d4	| 送信サイズ == 送信した数？
 	beq	PUTSTRING_9
 	/* (5) */
 	moveq	#1, %d0
-	move.b	(%a0), %d1
+	move.b	(%a0), %d1	| a0:データ読み込み先の先頭アドレス
 	jsr	INQ
 	*d0 :キュー番号
 	*d1 :8bitデータ
 	*出力：d0(失敗 0/ 成功 1 )
 	/* (6) */
-	cmpi #0, %d0
-	beq	PUTSTRING_9
+	cmpi 	#0, %d0		| INQ失敗？
+	beq	PUTSTRING_9	
 	/* (7) */
-	addq	#1, %d4
-	addq	#1, %a0
+	addq	#1, %d4		| 送信した数に１を足す
+	addq	#1, %a0		| 読み込むデータを次に
 	/* (8) */
-	bra LOOP_PUTSTRING	
+	bra 	LOOP_PUTSTRING	| 全て送信 or INQ失敗まで続ける
 PUTSTRING_9:
 	/* (9) */
 	move.w	USTCNT1, %d6
-	ori.w	#0x0004, %d6	/* 0xFFFB = 0000000000000100 */
-	move.w	%d6,	USTCNT1 /* 送信割込み許可 */
+	ori.w	#0x0004, %d6	| 0xFFFB = 0000000000000100 
+	move.w	%d6,	USTCNT1 | 送信割込み許可 
 PUTSTRING_10:
 	/* (10) */
-	move.l	%d4, %d0
+	move.l	%d4, %d0	| d0(出力) = sz(送信した数)
 End_PUTSTRING:
 	movem.l (%sp)+, %d1-%d6/%a0
 	rts
