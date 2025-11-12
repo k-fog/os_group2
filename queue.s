@@ -199,9 +199,9 @@ END_INQ:
 
 
 **********OUTQ**********************************************************************
-*d0 :キュー番号
-*出力１：d0(失敗 0/ 成功 1 )
-*出力２：d1（取り出した8bitデータ）
+** 入力　：d0（キュー番号）
+** 出力１：d0(失敗 0/ 成功 1 )
+** 出力２：d1（取り出した8bitデータ）
 
 OUTQ:
 	/* (1) */
@@ -211,6 +211,7 @@ OUTQ:
 	/* (2) */
 	move.w #0x2700,%sr
 
+	** キューd0について、キュー情報の先頭・キューの先頭のアドレスをそれぞれ取得
 	******************************************************************************************
 	lea.l	Q_INFO, %a1		/* a1: Q_INFOの開始地点 */
 	lea.l	Q0_START, %a2 		/* a2: Q0の先頭番地 */
@@ -231,34 +232,34 @@ OUTQ:
 	/* (3) */
 	move.l	S_OFS(%a0), %d4
 	cmpi.l	#0, %d4
-	beq	OUTQ_Failure
+	beq	OUTQ_Failure		| s == 0?（空のキューから取り出そうとしている？）
 	bra	OUTQ_Step1
 OUTQ_Failure:
 	moveq	#0, %d0
 	bra	END_OUTQ
 OUTQ_Step1:
 	/* (4) */
-	move.l	OUT_OFS(%a0), %a4
-	move.b	(%a4), %d1
+	move.l	OUT_OFS(%a0), %a4	| a4 = out
+	move.b	(%a4), %d1		| d1 = m[out]
 
 	/* (5) */
-	movea.l	OUT_OFS(%a0), %a4
-	movea.l	BOTTOM_OFS(%a0), %a5
-	cmpa.l	%a4, %a5
+	movea.l	OUT_OFS(%a0), %a4	| a4 = out
+	movea.l	BOTTOM_OFS(%a0), %a5	| a5 = bottom
+	cmpa.l	%a4, %a5		| out == bottom?（取り出し場所のポインタが、キューの末尾に到達？）
 	beq	BACK_OUT
 	movea.l	OUT_OFS(%a0), %a4
 	addq	#1, %a4
-	move.l	%a4, OUT_OFS(%a0)
+	move.l	%a4, OUT_OFS(%a0)	| out++
 	bra	OUTQ_Step2
 BACK_OUT:
 	movea.l	TOP_OFS(%a0), %a4
-	move.l	%a4, OUT_OFS(%a0)
+	move.l	%a4, OUT_OFS(%a0)	| out = top
 OUTQ_Step2:
 	/* (6) */
-	move.l	S_OFS(%a0), %d4
+	move.l	S_OFS(%a0), %d4		
 	subq.l	#1, %d4
-	move.l	%d4, S_OFS(%a0)
-	moveq	#1, %d0
+	move.l	%d4, S_OFS(%a0)		| s--
+	moveq	#1, %d0			| d0 = 1（成功）
 	
 END_OUTQ:	
 	/* (7) */
