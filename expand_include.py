@@ -24,9 +24,9 @@ def expand_file(path, included=None):
             m = include_re.match(line)
             if m:
                 inc_path = os.path.join(base_dir, m.group(1))
-                out_lines.append(f"; ---- begin include {m.group(1)} ----\n")
+                out_lines.append(f"/* ---- begin include {m.group(1)} ---- */\n")
                 out_lines.extend(expand_file(inc_path, included))
-                out_lines.append(f"; ---- end include {m.group(1)} ----\n")
+                out_lines.append(f"/*; ---- end include {m.group(1)} ----*/\n\n")
             else:
                 out_lines.append(line)
 
