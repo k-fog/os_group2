@@ -102,6 +102,7 @@ _STRTOL:
     clr.l %D0
     move.l #10, %D2
 _STRTOL_WHILE:
+    clr.l %D1
     move.b (%A1), %D1 | %D1 = *src
     cmpi.b #'0', %D1
     blt _STRTOL_END
