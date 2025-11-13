@@ -22,7 +22,7 @@
 .equ UTX1, REGBASE+0x906    | UART1 送信レジスタ
 
 /* LED */
-/*ここで指定されたアドレスに表示させたい数字やマークの情報を入れることでLED表示を変更できる(室原)*/
+/*ここで指定されたアドレスに表示させたい文字コードを入れることでLED表示を変更できる(室原)*/
 .equ LED7, IOBASE+0x000002f | ボード搭載の LED 用レジスタ
 .equ LED6, IOBASE+0x000002d 
 .equ LED5, IOBASE+0x000002b
@@ -83,13 +83,14 @@ boot:
 .include "timer.s"
 
 uart1_interrupt:
+/*送信割り込みベクタと受信割り込みベクタが同じであるため受信レジスタ、送信レジスタの値で送受信割り込みを区別する(室原)*/
     movem.l %D0-%D7/%A0-%A6, -(%SP) | 使用するレジスタをスタックに保存
     move.w UTX1, %D0                | UTX1をD0レジスタにコピーし保存しておく
     move.w %D0, %D1                 | 計算用にD1レジスタにコピー
     lsr.w #8, %D1
     lsr.w #7, %D1                   | 15回右シフト（上位ビットは0埋め）
     cmpi.w #1, %D1                  | 0=FIFOが空ではない, 1=空である（割り込み発生）
-    bne UART1_INTR_SKIP_PUT         | 送信割り込みでないならスキップ
+    bne UART1_INTR_SKIP_PUT         | 送信割り込みでないならスキップ 受信割り込みの処理に入る(室原)
     move.l #0, %D1                  | ch=%D1.L=0
     jsr INTERPUT
 UART1_INTR_SKIP_PUT:
