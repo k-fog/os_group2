@@ -24,7 +24,7 @@
 /* LED */
 /*ここで指定されたアドレスに表示させたい数字やマークの情報を入れることでLED表示を変更できる(室原)*/
 .equ LED7, IOBASE+0x000002f | ボード搭載の LED 用レジスタ
-.equ LED6, IOBASE+0x000002d | 使用法については付録 A.4.3.1
+.equ LED6, IOBASE+0x000002d 
 .equ LED5, IOBASE+0x000002b
 .equ LED4, IOBASE+0x0000029
 .equ LED3, IOBASE+0x000003f
