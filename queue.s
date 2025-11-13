@@ -46,7 +46,7 @@ INTERPUT:
 	movem.l %d0-%d2,-(%sp)
 	
 	/* (1) */
-	move.w  #0x2700, %sr
+	move.w  #0x2700, %sr   |割り込み禁止(走行レベル7) 新垣
 	/* (2) */
 	cmpi #0, %d1
 	bne	End_INTERPUT		|ch=0以外なら何もしない
@@ -101,7 +101,7 @@ LOOP_PUTSTRING:
 	/* (5) */
 	moveq	#1, %d0
 	move.b	(%a0), %d1	| a0:データ読み込み先の先頭アドレス
-	jsr	INQ
+	jsr	INQ             | INQ(1,p[i])を実行　（新垣）
 	*d0 :キュー番号
 	*d1 :8bitデータ
 	*出力：d0(失敗 0/ 成功 1 )
