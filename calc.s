@@ -85,7 +85,7 @@ _CLEAR_LOOP_END:
 /*
  * _STRTOL: string to integer (long)
  * %A1: address of string
- * %D0.W: integer
+ * %D0.L: integer
  * %A0: end pointer
  */
 _STRTOL:
@@ -99,7 +99,7 @@ _STRTOL:
 */
     movem.l %D1-%D2/%A1, -(%SP)
 
-    clr.w %D0
+    clr.l %D0
     move.l #10, %D2
 _STRTOL_WHILE:
     move.b (%A1), %D1 | %D1 = *src
@@ -110,7 +110,7 @@ _STRTOL_WHILE:
     adda.l #1, %A1
     mulu.w %D2, %D0  | %D0 *= 10
     subi.b #'0', %D1 | %D1 -= '0'
-    add.w %D1, %D0
+    add.l %D1, %D0
     bra _STRTOL_WHILE
 _STRTOL_END:
     movea.l %A1, %A0
@@ -121,7 +121,7 @@ _STRTOL_END:
 /*
  * _LTOSTR: integer to string
  * %A1: address of buffer
- * %D1.W: integer
+ * %D1.L: integer
  * //TODO %D2.L: buffer size
  * %D0.L: return value; data count
  */
@@ -148,10 +148,10 @@ _LTOSTR:
 
     | %D1(val), %D2(count), %A2(buf_head)
     movea.l %A1, %A2
-    cmpi.w #0, %D1   | check val < 0
+    cmpi.l #0, %D1   | check val < 0
     bge _LTOSTR_SKIP_REVERSE
     move.b #'-', (%A1)+
-    neg.w %D1
+    neg.l %D1
 _LTOSTR_SKIP_REVERSE:
 
     move.w #1, %D3   | %D3.W(div) = 1
@@ -205,8 +205,8 @@ _PUSH:
     lea.l STACK, %A1
     move.l (STACK_TOP), %D2
     adda.l %D2, %A1
-    move.w %D1, (%A1)
-    addi.l #2, (STACK_TOP)
+    move.l %D1, (%A1)
+    addi.l #4, (STACK_TOP)
     movem.l (%SP)+, %D2/%A1
     rts
 
@@ -223,10 +223,10 @@ _POP:
     beq _POP_SKIP
 
     lea.l STACK, %A1
-    subi.l #2, (STACK_TOP)
+    subi.l #4, (STACK_TOP)
     move.l (STACK_TOP), %D2
     adda.l %D2, %A1
-    move.w (%A1), %D0
+    move.l (%A1), %D0
 _POP_SKIP:
     movem.l (%SP)+, %D2/%A1
     rts
@@ -262,8 +262,7 @@ READ_LOOP:
 READ_LOOP_END:
     lea.l INPUT_BUF, %A1  | %A1 = buffer head
     jsr EVAL  | -> RESULT
-    ext.w %D0
-    move.w %D0, %D1
+    move.l %D0, %D1
     movea.l %A0, %A1
     jsr PRINT  | -> output
 
@@ -293,16 +292,16 @@ EVAL_VAL:
     jsr _STRTOL
     cmpa.l %A0, %A1
     beq EVAL_NOT_VAL
-    move.w %D0, %D1
+    move.l %D0, %D1
     jsr _PUSH
     movea.l %A0, %A1
     bra EVAL_WHILE
 EVAL_NOT_VAL:
     move.b (%A1)+, %D3
     jsr _POP
-    move.w %D0, %D2
+    move.l %D0, %D2
     jsr _POP
-    move.w %D0, %D1
+    move.l %D0, %D1
 
     cmpi.b #'+', %D3
     beq EVAL_PLUS
@@ -314,11 +313,11 @@ EVAL_NOT_VAL:
     beq EVAL_DIV
     bra EVAL_ERR
 EVAL_PLUS:
-    add.w %D2, %D1
+    add.l %D2, %D1
     jsr _PUSH
     bra EVAL_WHILE
 EVAL_MINUS:
-    sub.w %D2, %D1
+    sub.l %D2, %D1
     jsr _PUSH
     bra EVAL_WHILE
 EVAL_MUL:
@@ -389,5 +388,5 @@ RESULT_BUF:
     .ds.b RESULT_BUF_SIZE
     .even
 STACK:
-    .ds.w STACK_SIZE
+    .ds.l STACK_SIZE
     .even
