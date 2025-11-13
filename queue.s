@@ -292,14 +292,3 @@ Q1_START: 	.ds.b	B_SIZE
 	.even
 Q_INFO:
 	.ds.b	Q_INFO_SIZE * Q_NUM
-
-	
-******************************
-** テスト用データ
-******************************
-Data_to_Que: 	.ascii	"abcdef"
-
-INQ_Result: .ds.l   300
-OUTQ_Data:  .ds.b   300
-OUTQ_Result:.ds.l   300
-

@@ -47,7 +47,7 @@ boot:
     lea.l SYS_STK_TOP, %SP  | スタックポインタの設定
 
     /* 割り込みコントローラの初期化 */
-    move.b #0x40, IVR       | ユーザ割り込みベクタ番号を0x40+levelに設定
+    move.b #0x40, IVR       | ユーザ割り込みベクタ番号を0x40*4(=0x100)+levelに設定
     move.l #0x00ffffff, IMR | 全割り込みマスク
 
     move.l #syscall_handler, 0x080 | TRAP#0の割り込みベクタを登録
