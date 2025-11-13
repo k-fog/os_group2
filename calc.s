@@ -217,7 +217,7 @@ _PUSH:
  */
 _POP:
     movem.l %D2/%A1, -(%SP)
-    clr.w %D0
+    clr.l %D0
     move.l (STACK_TOP), %D2
     cmpi.l #0, %D2
     beq _POP_SKIP
@@ -262,6 +262,7 @@ READ_LOOP:
 READ_LOOP_END:
     lea.l INPUT_BUF, %A1  | %A1 = buffer head
     jsr EVAL  | -> RESULT
+    ext.w %D0
     move.w %D0, %D1
     movea.l %A0, %A1
     jsr PRINT  | -> output
