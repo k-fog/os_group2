@@ -327,7 +327,7 @@ EVAL_MUL:
     bra EVAL_WHILE
 EVAL_DIV:
     divs %D2, %D1
-    andi.l #0x0000FFFF, %D1
+    ext.l %D1
     jsr _PUSH
     bra EVAL_WHILE
 EVAL_WHILE_END:
