@@ -51,3 +51,18 @@ void set_task(void (*task_addr)()) {
     tcb->stack_ptr = init_stack(); // stack_ptrを登録
     ready = new_task;
 }
+
+void addq(TCB_TYPE* q_ptr, int task_id) {
+    int next;
+    for (int i = 1; i < NUMTASK + 1; i++) {
+        next = (*q_ptr).next;
+	if (next == NULLTASKID) {      // キュー末尾なら
+	    (*q_ptr).next = task_id;   // 末尾にtask_idのTCBを登録
+	    if (task_tab[task_id].next != NULLTASKID) { 
+	        task_tab[task_id].next = NULLTASKID;  // task_tab[task_id]がキューの末尾であることを示す
+	    }
+            return;
+	}
+	q_ptr = &task_tab[next];   // ポインタを次のタスクに進める
+    }
+}
