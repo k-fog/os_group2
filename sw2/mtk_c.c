@@ -54,3 +54,10 @@ void v_body(int ID) {
   } 
 }
 
+void sleep(int ch) {
+  
+}
+
+void wakeup(int ch){
+
+}
