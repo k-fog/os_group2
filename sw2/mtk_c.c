@@ -37,10 +37,20 @@ void p_body(int ID) {
   // 1.セマフォの値を減らす
   SEMAPHORE_TYPE *sema = &semaphore[ID];
   sema->count -= 1;
-  
   // 2.マフォが獲得できなけれれば sleep(セマフォの ID)
   if (sema->count < 0) {
     sleep(ID);
+  } 
+}
+
+void v_body(int ID) {
+  // セマフォIDがスタックに積まれている
+  // 1.セマフォの値を増やす
+  SEMAPHORE_TYPE *sema = &semaphore[ID];
+  sema->count += 1;
+  // 2.セマフォが空けば，wakeup(セマフォの ID) 
+  if (sema->count <= 0) {
+    wakeup(ID);
   } 
 }
 
