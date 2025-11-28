@@ -4,7 +4,7 @@
 #define NUMSEMAPHORE  2 // セマフォの数
 
 #define TASK_UNDEF    0
-#define TASK_CURRENT  1
+#define TASK_INUSE    1
 #define TASK_FINISHED 2
 
 typedef int TASK_ID_TYPE;
@@ -41,8 +41,8 @@ extern SEMAPHORE_TYPE semaphore[NUMSEMAPHORE];
 
 /* multi task */
 void init_kernel();
-void set_task();
-void init_stack();
+void set_task(void (*task_addr)());
+void *init_stack();
 void begin_sch();
 void addq();
 void removeq();

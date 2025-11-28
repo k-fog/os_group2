@@ -14,7 +14,7 @@ void init_kernel() {
     for (int i = 0; i < NUMTASK; i++) {
         TCB_TYPE *tcb = &task_tab[i + 1];
         tcb->task_addr = NULL;
-        tcb->stack_ptr = (void *)(stacks[i].ustack + STKSIZE);
+        tcb->stack_ptr = NULL;
         tcb->priority = 0;
         tcb->status = TASK_UNDEF;
         tcb->next = NULLTASKID;
@@ -32,4 +32,22 @@ void init_kernel() {
     }
 }
 
+void set_task(void (*task_addr)()) {
+    // タスクIDの決定
+    TASK_ID_TYPE task_id = NULLTASKID;
+    for (int i = 0; i < NUMTASK; i++) {
+        TCB_TYPE *tcb = &task_tab[i + 1];
+        if (tcb->status == TASK_UNDEF || tcb->status == TASK_FINISHED) {
+            task_id = i + 1;
+            break;
+        }
+    }
+    if (task_id == NULLTASKID) return; // 空きがない
+    new_task = task_id; // 空いていたTCBのIDをnew_tabに代入
 
+    TCB_TYPE *tcb = &task_tab[new_task];
+    tcb->task_addr = task_addr;    // task_addrを登録
+    tcb->status = TASK_INUSE;      // statusを登録
+    tcb->stack_ptr = init_stack(); // stack_ptrを登録
+    ready = new_task;
+}
