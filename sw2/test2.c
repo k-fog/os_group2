@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include "mtk_c.h"
+
 void task1() {
     while (1) printf("task1 ");
 }

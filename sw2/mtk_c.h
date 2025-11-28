@@ -1,12 +1,16 @@
 #define NULLTASKID    0 // キューの終端
 #define NUMTASK       5 // 最大タスク数
 #define STKSIZE    1024 // スタックサイズ
+#define NUMSEMAPHORE  2 // セマフォの数
 
 #define TASK_UNDEF    0
 #define TASK_CURRENT  1
 #define TASK_FINISHED 2
 
 typedef int TASK_ID_TYPE;
+
+#define TRAP1_ID 33
+extern void pv_handler(void);
 
 typedef struct {
     int count;
@@ -29,10 +33,10 @@ typedef struct {
 } STACK_TYPE;
 extern STACK_TYPE stacks[NUMTASK];
 
-extern int curr_task;
-extern int new_task;
-extern int next_task
-extern int ready;
+extern TASK_ID_TYPE curr_task;
+extern TASK_ID_TYPE new_task;
+extern TASK_ID_TYPE next_task;
+extern TASK_ID_TYPE ready;
 extern SEMAPHORE_TYPE semaphore[NUMSEMAPHORE];
 
 /* multi task */
