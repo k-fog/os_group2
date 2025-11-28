@@ -1,18 +1,34 @@
+#include <stdio.h>
 #include "mtk_c.h"
 
-int curr_task;
-int new_task;
-int next_task
-int ready;
+TASK_ID_TYPE curr_task;
+TASK_ID_TYPE new_task;
+TASK_ID_TYPE next_task;
+TASK_ID_TYPE ready;
 TCB_TYPE task_tab[NUMTASK + 1];
 STACK_TYPE stacks[NUMTASK];
 SEMAPHORE_TYPE semaphore[NUMSEMAPHORE];
 
 void init_kernel() {
+    // TCB配列を初期化する
     for (int i = 0; i < NUMTASK; i++) {
-        int task_id = i + 1;
-        task_tab[task_id].stack_ptr = (void *)stacks[i].ustack;
-        task_tab[task_id].status = TASK_UNDEF;
+        TCB_TYPE *tcb = &task_tab[i + 1];
+        tcb->task_addr = NULL;
+        tcb->stack_ptr = (void *)(stacks[i].ustack + STKSIZE);
+        tcb->priority = 0;
+        tcb->status = TASK_UNDEF;
+        tcb->next = NULLTASKID;
+    }
+    // readyキューを初期化する
+    ready = NULLTASKID;
+    // pv_handlerをTRAP #1の割り込みベクタに登録
+    *(int *)(TRAP1_ID * 4) = (int)pv_handler;
+    // セマフォの値を初期化する
+    for (int i = 0; i < NUMSEMAPHORE; i++) {
+        SEMAPHORE_TYPE *sema = &semaphore[i];
+        sema->count = 1; // 1: 利用可能, <1: 待ちタスクがある
+        sema->nst = 0;   // たぶんまだ使わない
+        sema->task_list = NULLTASKID;
     }
 }
 
