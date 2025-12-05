@@ -3,19 +3,15 @@
 
 void task1() {
     while (1) {
-        printf("sleep task1 then switch to task2\n");
-        sleep(0);
-        printf("task1 woke up task2.\n");
-        wakeup(0);
+        P(0);
+        printf("task1 \n");
     }
 }
 
 void task2() {
     while (1) {
-        printf("task2 woke up task1.\n");
-        wakeup(0);
-        printf("sleep task2 then switch to task1\n");
-        sleep(0);
+        V(0);
+        printf("task2 \n");
     }
 }
 

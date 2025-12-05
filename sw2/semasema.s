@@ -8,48 +8,50 @@
 .global pv_handler
 .even
 pv_handler:
-	movem.l %a0-%a6/%D0-%D7, -(%ssp) /*スーパーバイザモードなうだからssp、ユーザ側ならsp。今回はtrap #1が使われるのでスーパーバイザモード*/
-	move.w %SR, %D7 /*SR-->D7であとから復元できるように*/
-	movem.w %D7, -(%ssp) /*D7の下位１６ビットSRだけSSPに保存*/
-	move.w #0x2700, %SR /*2.特権モード2700=2進数で0010 0111 0000 0000！*/
-	movem.l %D1, -(%ssp) /*D1 を引数としてスタックに積む(p/v)*/
-	cmp.l #0, %D0 /*D0=0 ->P操作それ以外　D0≠0 ->V*/
+	movem.l %D0-%D1, -(%SP) /*スーパーバイザモードなうだからssp、ユーザ側ならsp。今回はtrap #1が使われるのでスーパーバイザモード*/
+	move.w %SR, -(%SP)      /* SRの値をスタックに退避 */
+	move.w #0x2700, %SR     /* 走行レベルを7にする。特権モード2700=2進数で0010 0111 0000 0000！*/
+	move.l %D1, -(%SP)      /*D1 を引数としてスタックに積む(p/v)*/
+	cmpi.l #0, %D0          /*D0=0 ->P操作それ以外　D0≠0 ->V*/
 	bne vbra
 pbra:
 	jsr p_body /*P操作本体飛び*/
-	movem.l (%ssp)+, %D1 /*D1の復元*/
 	bra finish
 vbra:
 	jsr v_body
-	movem.l (%ssp)+, %D1
 finish:
-	movem.w (%ssp)+, %D7/*%sspが指し示している場所から読み出してD7に入れる,その後スタックを一段戻す*/
-	move.w %D7, %SR /*SRをtrap前状態に戻す*/
-	movem.l (%ssp)+, %a0-%a6/%D0-%D7
+    addq.l #4, %SP     /* 引数分のスタックを戻す */
+	move.w (%SP)+, %SR /* SRを復帰（走行レベルを戻す） */
+	movem.l (%SP)+, %D0-%D1
 	rte
+
 *****************************
 ***P
 *****************************
+.global P
+.even
 P:
-	movem.l %D0-%D1/%a0, -(%sp)/*ユーザすタック*/
-	move.l %sp, %a0 /*a0にスタックポインタコピー*/
-	add.l #19, %a0 /*SPから１９上がったところに引数がある*/
-	move.l #0, %D0 /*P操作で有ることをカーネル側に伝える*/
-	move.b (%a0), %D1 /*A0が示すアドレスから１バイト読みこんでD1に入れる*/
-	trap #1 /*スーパーバイザモードに入って、ベクタテーブル？のtrap#1のエントリに飛ぶ*/
-	movem.l (%sp)+, %D0-%D1/%a0/*ユーザモードに戻って、退避したやつを戻す*/
+    link.w %FP, #0
+    movem.l %D0-%D1, -(%SP)
+    move.l #0, %D0     /* PシステムコールID */
+    move.l 8(%FP), %D1 /* 引数 */
+	trap #1            /*スーパーバイザモードに入って、ベクタテーブル？のtrap#1のエントリに飛ぶ*/
+    movem.l (%SP)+, %D0-%D1
+    unlk %FP
 	rts
+
 *****************************
 ***V
 *****************************
+.global V
+.even
 V:
-	movem.l %d0-%d1/%a0, -(%sp) /*D1,D0,aOをユーザスタックに退避*/
-	move.l %sp, %a0
-	add.l #19, %a0
-	move.l #0, %d0
-	add.l #1, %d0 /*D0=1よりD0≠0となって、V操作になる*/
-	move.b (%a0), %d1
-	trap #1
-	movem.l (%sp)+, %d0-%d1/%a0 /*pと同じ*/
+    link.w %FP, #0
+    movem.l %D0-%D1, -(%SP)
+    move.l #1, %D0     /* VシステムコールID */
+    move.l 8(%FP), %D1 /* 引数 */
+	trap #1            /*スーパーバイザモードに入って、ベクタテーブル？のtrap#1のエントリに飛ぶ*/
+    movem.l (%SP)+, %D0-%D1
+    unlk %FP
 	rts
 *****************************
