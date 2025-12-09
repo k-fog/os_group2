@@ -59,8 +59,8 @@ void set_task(void (*task_addr)()) {
 void begin_sch() {
     curr_task = removeq(&task_tab[ready]); // 最初のタスクの決定
     if (DEBUG) printf("[DEBUG] curr_task = %d\n", curr_task);
-    init_timer(); // タイマの設定
-    printf("[OK] init_timer\n");
+    //init_timer(); // タイマの設定
+    //printf("[OK] init_timer\n");
     first_task(); // 最初のタスクへ遷移
 }
 
