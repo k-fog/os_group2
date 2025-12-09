@@ -21,7 +21,7 @@ void task1() {
 
 void task2() {
     printf("task2 started\n");
-    //V(1);
+    V(1);
     P(2);
     while (1) {
         printf("task2\n");
@@ -37,7 +37,7 @@ int main() {
 
     semaphore[1].count = 0; 
     semaphore[2].count = 0;
-    V(1);
+    
     set_task(task1);
     set_task(task2);
 
