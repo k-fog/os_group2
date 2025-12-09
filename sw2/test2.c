@@ -1,25 +1,32 @@
 #include <stdio.h>
 #include "mtk_c.h"
 
-void task1() {
-    while (1) {
-        P(0);
-        printf("task1 \n");
-    }
-}
-
-void task2() {
-    while (1) {
-        V(0);
-        printf("task2 \n");
-    }
-}
-
 void dump_queue() {
     printf("[DEBUG] dump ready queue\n");
     for (TASK_ID_TYPE id = ready; id != NULLTASKID; id = task_tab[id].next) {
         TCB_TYPE *cur = &task_tab[id];
         printf("[DEBUG] task id = %d, task_addr = %d\n", id, (int) cur->task_addr);
+    }
+}
+
+void task1() {
+    printf("task1 started\n");
+    P(1);
+    while (1) {
+        printf("task1\n");
+        V(2);
+        P(1);
+    }
+}
+
+void task2() {
+    printf("task2 started\n");
+    V(2);
+    P(2);
+    while (1) {
+        printf("task2\n");
+        V(1);
+        P(2);
     }
 }
 
@@ -31,8 +38,8 @@ int main() {
     set_task(task1);
     set_task(task2);
 
-    printf("[DEBUG] sizeof TCB_TYPE = %ld\n", sizeof(TCB_TYPE));
-    printf("[DEBUG] ready = %d\n", ready);
+    if (DEBUG) printf("[DEBUG] sizeof TCB_TYPE = %ld\n", sizeof(TCB_TYPE));
+    if (DEBUG) printf("[DEBUG] ready = %d\n", ready);
     dump_queue();
 
     begin_sch();

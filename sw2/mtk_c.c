@@ -58,7 +58,7 @@ void set_task(void (*task_addr)()) {
 
 void begin_sch() {
     curr_task = removeq(&task_tab[ready]); // 最初のタスクの決定
-    printf("[DEBUG] curr_task = %d\n", curr_task);
+    if (DEBUG) printf("[DEBUG] curr_task = %d\n", curr_task);
     init_timer(); // タイマの設定
     printf("[OK] init_timer\n");
     first_task(); // 最初のタスクへ遷移
@@ -78,7 +78,7 @@ void *init_stack(TASK_ID_TYPE id) {
 }
 
 void addq(TCB_TYPE* q_ptr, TASK_ID_TYPE task_id) {
-    printf("[DEBUG] addq: added task_id = %d\n", task_id);
+    if (DEBUG) printf("[DEBUG] addq: added task_id = %d\n", task_id);
     // 引数にキューへのポインタとタスクの ID を取り，その TCB をキューの最後尾に登録する．
     TCB_TYPE *cur = q_ptr;
     while (cur->next != NULLTASKID) cur = &task_tab[cur->next];
@@ -95,6 +95,7 @@ TASK_ID_TYPE removeq(TCB_TYPE* q_ptr) {
             task_id = semaphore[i].task_list; // task_id = キューの先頭タスクID
             semaphore[i].task_list = (*q_ptr).next; // 先頭タスクをキューから取り除く
             // (*q_ptr).next = NULLTASKID;
+            if (DEBUG) printf("[DEBUG] removeq returns %d (semaphore queue)\n", task_id);
             return task_id;
         }
     }
@@ -104,41 +105,43 @@ TASK_ID_TYPE removeq(TCB_TYPE* q_ptr) {
         task_id = ready; // task_id = キューの先頭タスクID
         ready = (*q_ptr).next; // 先頭タスクをキューから取り除く
         // (*q_ptr).next = NULLTASKID;
+        if (DEBUG) printf("[DEBUG] removeq returns %d (ready queue)\n", task_id);
         return task_id;
     }
     return NULLTASKID;
 }
 
 void sched() {
+    if (DEBUG) printf("[DEBUG] sched()\n");
     next_task = removeq(&task_tab[ready]); // next_task = readyキューの先頭タスクID
-    printf("[DEBUG] sched: next_task = %d\n", next_task);
+    if (DEBUG) printf("[DEBUG] sched: next_task = %d\n", next_task);
     while (next_task == NULLTASKID); // next_task = NULLTASKID なら無限ループ 
 }
 
 void p_body(int ID) {
+    if (DEBUG) printf("[DEBUG] p_body(%d)\n", ID);
     // セマフォIDがスタックに積まれている
     // 1.セマフォの値を減らす
     SEMAPHORE_TYPE *sema = &semaphore[ID];
     sema->count -= 1;
-    // 2.マフォが獲得できなけれれば sleep(セマフォの ID)
-    if (sema->count < 0) {
-        sleep(ID);
-    } 
+    // 2.セマフォが獲得できなけれれば sleep(セマフォの ID)
+    if (sema->count < 0) sleep(ID);
 }
 
 void v_body(int ID) {
-  // セマフォIDがスタックに積まれている
-  // 1.セマフォの値を増やす
-  SEMAPHORE_TYPE *sema = &semaphore[ID];
-  sema->count += 1;
-  // 2.セマフォが空けば，wakeup(セマフォの ID) 
-  if (sema->count <= 0) {
-    wakeup(ID);
-  } 
+    if (DEBUG) printf("[DEBUG] v_body(%d)\n", ID);
+    // セマフォIDがスタックに積まれている
+    // 1.セマフォの値を増やす
+    SEMAPHORE_TYPE *sema = &semaphore[ID];
+    sema->count += 1;
+    // 2.セマフォが空けば，wakeup(セマフォの ID) 
+    if (sema->count <= 0) wakeup(ID);
 }
 
 void sleep(int ch) {
+    if (DEBUG) printf("[DEBUG] sleep(%d)\n", ch);
     SEMAPHORE_TYPE *sema = &semaphore[ch]; /*セマフォのポインタの取得p38*/
+    if (sema->task_list == NULLTASKID) sema->task_list = curr_task;
     addq(&task_tab[sema->task_list], curr_task); /*現在実行中のタスクcurrent_taskを、セマフォの待ち行列(task_list)の末尾に追加する。*/
     task_tab[curr_task].status = TASK_SLEEP; /*タスクの状態を管理(TCBのstatusを管理する)*/
     sched();
@@ -146,10 +149,12 @@ void sleep(int ch) {
 }
 
 void wakeup(int ch){
+    if (DEBUG) printf("[DEBUG] wakeup(%d)\n", ch);
     SEMAPHORE_TYPE *sema = &semaphore[ch];
     TASK_ID_TYPE woken_task_id = removeq(&task_tab[sema->task_list]);
     
     if (woken_task_id != NULLTASKID) {
+        if (ready == NULLTASKID) ready = woken_task_id; 
         addq(&task_tab[ready], woken_task_id);
         task_tab[woken_task_id].status = TASK_READY;
     }

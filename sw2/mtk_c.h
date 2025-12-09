@@ -1,7 +1,9 @@
+#define DEBUG 0 // 0:normal, 1:debug
+
 #define NULLTASKID    0 // キューの終端
 #define NUMTASK       5 // 最大タスク数
 #define STKSIZE    1024 // スタックサイズ
-#define NUMSEMAPHORE  2 // セマフォの数
+#define NUMSEMAPHORE  8 // セマフォの数
 
 #define TASK_UNDEF    0
 #define TASK_INUSE    1
