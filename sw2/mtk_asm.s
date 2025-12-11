@@ -64,7 +64,6 @@ swtch:
     rte
 
 * タイマ関連のサブルーチン
-.global hard_clock
 .even
 hard_clock:
     movem.l %D1/%A1, -(%SP)

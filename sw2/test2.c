@@ -27,22 +27,21 @@ void dump() {
 
 void task1() {
     printf("task1 started\n");
-    P(1);
+    int f = 0;
     while (1) {
+        P(0);
+        if (f == 0) { skipmt(); f = 1; }
         printf("task1\n");
-        V(2);
-        P(1);
+        V(0);
     }
 }
 
 void task2() {
     printf("task2 started\n");
-    V(1);
-    P(2);
     while (1) {
+        P(0);
         printf("task2\n");
-        V(1);
-        P(2);
+        V(0);
     }
 }
 
@@ -51,9 +50,6 @@ int main() {
     init_kernel();
     printf("[OK] init_kernel\n");
 
-    semaphore[1].count = 0; 
-    semaphore[2].count = 0;
-    
     set_task(task1);
     set_task(task2);
 

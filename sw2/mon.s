@@ -157,11 +157,12 @@ USR_STK_TOP:     | ユーザスタック領域の最後尾
 **必要に応じてD0に戻り値を格納（鴻上）
 *****************************************	
 	
-.extern hard_clock
 syscall_handler:
 	cmpi.l #SYSCALL_NUM_SKIPMT, %D0   |D0==5
-	beq hard_clock
-
+	bne NOT_SKIPMT
+    jsr CALL_RP
+    rte
+NOT_SKIPMT:
 	movem.l %D1-%D7/%A0-%A6, -(%SP)
 	cmpi.l #SYSCALL_NUM_GETSTRING, %D0   |D0==1?（鴻上）|
 	beq CALL_GETSTRING                   |→GETSTRING処理へ|
