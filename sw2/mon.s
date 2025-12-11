@@ -160,7 +160,9 @@ USR_STK_TOP:     | ユーザスタック領域の最後尾
 syscall_handler:
 	cmpi.l #SYSCALL_NUM_SKIPMT, %D0   |D0==5
 	bne NOT_SKIPMT
+	move.l %A1, -(%SP)
     jsr CALL_RP
+	move.l (%SP)+, %A1
     rte
 NOT_SKIPMT:
 	movem.l %D1-%D7/%A0-%A6, -(%SP)
