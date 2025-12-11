@@ -3,7 +3,6 @@
 
 .equ SIZEOF_TCB_TYPE, 20
 .equ TCB_TYPE_STACK_PTR_OFFSET, 4
-.equ TCB_TYPE_NEXT_OFFSET, 16
 
 .global first_task
 .even
