@@ -55,6 +55,7 @@ extern void first_task();
 extern void swtch();
 /* timer */
 extern void init_timer();
+extern void init_skipmt();
 
 /* semaphore */
 extern void P(int ch);

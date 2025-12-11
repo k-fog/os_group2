@@ -64,6 +64,7 @@ swtch:
     rte
 
 * タイマ関連のサブルーチン
+.global hard_clock
 .even
 hard_clock:
     movem.l %D1/%A1, -(%SP)
@@ -90,6 +91,14 @@ init_timer:
 	move.l #hard_clock, %D2 /*hard_clockを呼び出すよう設定*/
 	trap #0
     rts
+
+.global skipmt
+.even
+skipmt:
+	move.l #SYSCALL_NUM_SKIPMT, %D0
+	trap #0
+    rts
+
 
 .include "semasema.s"
 
