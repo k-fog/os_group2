@@ -8,7 +8,7 @@ int read(int fd, char *buf, int nbytes)
   int  i;
   int ch;
   
-  swith(fd) {
+  switch(fd) {
     case 0:
 	ch = 0;
 	break;
@@ -20,7 +20,7 @@ int read(int fd, char *buf, int nbytes)
 	break;
     default:
 	errno = EBADF;
-	return -1
+	return -1;
   }
 
   for (i = 0; i < nbytes; i++) {
@@ -59,7 +59,7 @@ int write (int fd, char *buf, int nbytes)
   int i, j;
   int ch;
   
-  swith(fd) {
+  switch(fd) {
     case 1:
 	ch = 0;
 	break;
@@ -74,13 +74,13 @@ int write (int fd, char *buf, int nbytes)
 	break;
     default:
 	errno = EBADF;
-	return -1
+	return -1;
   }
   for (i = 0; i < nbytes; i++) {
     if (*(buf + i) == '\n') {
       outbyte (ch, '\r');          /* LF -> CRLF */
     }
-    outbyte (*(buf + i));
+    outbyte (ch, *(buf + i));
     for (j = 0; j < 300; j++);
   }
   return (nbytes);
