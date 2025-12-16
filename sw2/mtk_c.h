@@ -17,10 +17,10 @@ typedef int TASK_ID_TYPE;
 extern void pv_handler(void);
 
 //テーマ３関連
-FILE *com0in;
-FILE *com0out;
-FILE *com1in;
-FILE *com1out;
+extern FILE *com0in;
+extern FILE *com0out;
+extern FILE *com1in;
+extern FILE *com1out;
 int fcntl(int fd, int cmd, ...);
 
 typedef struct {

@@ -2,6 +2,10 @@
 #include <stdarg.h>
 #include <fcntl.h>
 #include "mtk_c.h"
+FILE *com0in;
+FILE *com0out;
+FILE *com1in;
+FILE *com1out;
 
 int main() {
   com0in = fdopen(3, "r");
