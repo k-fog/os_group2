@@ -1,6 +1,6 @@
 #include <errno.h>
-extern void outbyte(unsigned char c);
-extern char inbyte();
+extern void outbyte(int ch,unsigned char c);
+extern char inbyte(int ch);
 
 int read(int fd, char *buf, int nbytes)
 {
