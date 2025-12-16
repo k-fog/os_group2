@@ -1,4 +1,4 @@
-#include<errno.h>
+#include <errno.h>
 extern void outbyte(unsigned char c);
 extern char inbyte();
 
@@ -9,16 +9,16 @@ int read(int fd, char *buf, int nbytes)
   int ch;
   
   swith(fd) {
-      case 0:
-	ch=0;
+    case 0:
+	ch = 0;
 	break;
-      case 3:
-	ch=0;
+    case 3:
+	ch = 0;
 	break;
-      case 4:
-	ch=1;
+    case 4:
+	ch = 1;
 	break;
-      default:
+    default:
 	errno = EBADF;
 	return -1
   }
@@ -57,9 +57,28 @@ int read(int fd, char *buf, int nbytes)
 int write (int fd, char *buf, int nbytes)
 {
   int i, j;
+  int ch;
+  
+  swith(fd) {
+    case 1:
+	ch = 0;
+	break;
+    case 2:
+	ch = 0;
+	break;
+    case 3:
+	ch = 0;
+	break;
+    case 4:
+	ch = 1;
+	break;
+    default:
+	errno = EBADF;
+	return -1
+  }
   for (i = 0; i < nbytes; i++) {
     if (*(buf + i) == '\n') {
-      outbyte ('\r');          /* LF -> CRLF */
+      outbyte (ch, '\r');          /* LF -> CRLF */
     }
     outbyte (*(buf + i));
     for (j = 0; j < 300; j++);
