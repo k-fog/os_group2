@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <fcntl.h>
 #include "mtk_c.h"
 
 TASK_ID_TYPE curr_task;
@@ -155,4 +156,14 @@ void wakeup(int ch){
     TASK_ID_TYPE woken_task_id = removeq(&task_tab[sema->task_list]);
     addq(&ready, woken_task_id);
     task_tab[woken_task_id].status = TASK_READY;
+}
+
+
+int fcntl(int fd, int cmd, ...) {
+  if (cmd == F_GETFL) {
+    return O_RDWR;
+  }
+  else {
+    return 0;
+  }
 }

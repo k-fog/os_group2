@@ -16,6 +16,13 @@ typedef int TASK_ID_TYPE;
 #define TRAP1_ID 33
 extern void pv_handler(void);
 
+//テーマ３関連
+#define FILE* com0in
+#define FILE* com0out
+#define FILE* com1in
+#define FILE* com1out
+int fcntl(int fd, int cmd, ...);
+
 typedef struct {
     int count;
     int nst;
