@@ -16,5 +16,7 @@ void file_open(void) {
 int main() {
   
   file_open();
-  fprintf(com0out, "Port0");
+  while(1) {
+    fprintf(com0out, "Port0");
+  }
 }
