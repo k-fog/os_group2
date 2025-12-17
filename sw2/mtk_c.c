@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <fcntl.h>
+#include <stdarg.h>
 #include "mtk_c.h"
 
 TASK_ID_TYPE curr_task;
