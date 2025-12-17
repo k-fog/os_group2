@@ -7,11 +7,14 @@ FILE *com0out;
 FILE *com1in;
 FILE *com1out;
 
-int main() {
-  com0in = fdopen(3, "r");
+void file_open(void) {
+	com0in = fdopen(3, "r");
   com0out = fdopen(3, "w");
   com1in = fdopen(4, "r");
   com1out = fdopen(4, "w");
-
+}
+int main() {
+  
+  file_open();
   fprintf(com0out, "Port0");
 }
