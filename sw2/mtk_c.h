@@ -66,3 +66,10 @@ void sleep(int ch);
 void wakeup(int ch);
 void p_body(int ID);
 void v_body(int ID);
+
+/* map */
+extern FILE* com0in;
+extern FILE* com0out;
+extern FILE* com1in;
+extern FILE* com1out;
+void fd_mapping();
