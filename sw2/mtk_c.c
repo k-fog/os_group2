@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "mtk_c.h"
+#include <stdarg.h>
+#include <fcntl.h>
+#include <errno.h>
 
 TASK_ID_TYPE curr_task;
 TASK_ID_TYPE new_task;
@@ -183,3 +186,16 @@ void wakeup(int ch){
         task_tab[woken_task_id].status = TASK_READY;
     }
 }
+
+FILE* com0in;
+FILE* com0out;
+FILE* com1in;
+FILE* com1out;
+
+void fd_mapping() {
+    com0in  = fdopen(3, "r");
+    com0out = fdopen(3, "w");
+    com1in  = fdopen(4, "r");
+    com1out = fdopen(4, "w");
+}
+
