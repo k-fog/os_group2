@@ -21,6 +21,12 @@
 .equ URX1, REGBASE+0x904    | UART1 受信レジスタ
 .equ UTX1, REGBASE+0x906    | UART1 送信レジスタ
 
+/* UART2（送受信）関係のレジスタ */
+.equ USTCNT2, REGBASE+0x910 | UART2 ステータス/コントロールレジスタ
+.equ UBAUD2, REGBASE+0x912  | UART2 ボーコントロールレジスタ
+.equ URX2, REGBASE+0x914    | UART2 受信レジスタ
+.equ UTX2, REGBASE+0x916    | UART2 送信レジスタ
+
 /* LED */
 /*ここで指定されたアドレスに表示させたい文字コードを入れることでLED表示を変更できる(室原)*/
 .equ LED7, IOBASE+0x000002f | ボード搭載の LED 用レジスタ
@@ -37,3 +43,4 @@
 .equ SYSCALL_NUM_PUTSTRING,   2 |文字列出力(PUTSTRING)|
 .equ SYSCALL_NUM_RESET_TIMER, 3 |タイマリセット|
 .equ SYSCALL_NUM_SET_TIMER,   4 |タイマセット|
+.equ SYSCALL_NUM_SKIPMT, 5

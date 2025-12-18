@@ -23,14 +23,22 @@ boot:
 
     move.l #syscall_handler, 0x080 | TRAP#0の割り込みベクタを登録
     move.l #uart1_interrupt, 0x110 | UART1の割り込みベクタを登録
+    move.l #uart2_interrupt, 0x114 | UART2の割り込みベクタを登録  
     move.l #tmr1_interrupt, 0x118  | TIMER1の割り込みベクタを登録
 
     /* 送受信 (UART1) 関係の初期化 (割り込みレベルは 4 に固定されている) */
-    move.w #0x0000, USTCNT1 | リセット
+    move.w #0x0000, USTCNT1   | リセット
     * move.w #0xe100, USTCNT1 | 送受信可能, パリティなし, 1 stop, 8 bit, 送受割り込み禁止
-    move.w #0xe108, USTCNT1 | 受信割り込み可能
-    * move.w #0xe104, USTCNT1   | 送信割り込み可能
-    move.w #0x0038, UBAUD1  | baud rate = 230400 bps
+    move.w #0xe108, USTCNT1   | 受信割り込み可能
+    * move.w #0xe104, USTCNT1 | 送信割り込み可能
+    move.w #0x0038, UBAUD1    | baud rate = 230400 bps
+    
+    /* 送受信 (UART2) 関係の初期化 (割り込みレベルは 4 に固定されている) */
+    move.w #0x0000, USTCNT2    | リセット
+    * move.w #0xe100, USTCNT2  | 送受信可能, パリティなし, 1 stop, 8 bit, 送受割り込み禁止
+    move.w #0xe108, USTCNT2    | 受信割り込み可能
+    * move.w #0xe104, USTCNT2  | 送信割り込み可能
+    move.w #0x0038, UBAUD2     | baud rate = 230400 bps
 
     /* タイマ関係の初期化 (割り込みレベルは 6 に固定されている) */
     move.w #0x0004, TCTL1   | restart, 割り込み不可,
@@ -40,85 +48,12 @@ boot:
     jsr	Init_Q            | キューの初期化
 
     * move.l #0xff3ffb, IMR | UART1の割り込みを許可
-    move.l #0xff3ff9, IMR | UART1,TIMERの割り込みを許可
+    * move.l #0xff3ff9, IMR | UART1,TIMERの割り込みを許可
+    move.l #0xff2ff9, IMR
     move.w #0x2000, %SR   | スーパーバイザモード・走行レベルは0
     jmp start
     * bra MAIN
 
-
-/* ---- begin include main.s ---- */
-****************************************************************
-*** プログラム領域
-****************************************************************
-.section .text
-.even
-MAIN:
-    ** 走行モードとレベルの設定 (「ユーザモード」への移行処理)
-    move.w #0x0000, %SR   | USER MODE, LEVEL 0
-    lea.l USR_STK_TOP,%SP | user stack の設定
-
-    ** システムコールによる RESET_TIMER の起動
-    move.l #SYSCALL_NUM_RESET_TIMER, %D0
-    trap #0
-
-    ** システムコールによる SET_TIMER の起動
-    move.l #SYSCALL_NUM_SET_TIMER, %D0
-    move.w #50000, %D1
-    move.l #TT, %D2
-    trap #0
-
-******************************
-* sys_GETSTRING, sys_PUTSTRING のテスト
-* ターミナルの入力をエコーバックする
-******************************
-LOOP:
-    move.l #SYSCALL_NUM_GETSTRING, %D0
-    move.l #0, %D1   | ch = 0
-    move.l #BUF, %D2 | p = #BUF
-    move.l #256, %D3 | size = 256
-    trap #0
-
-    move.l %D0, %D3 | size = %D0 (length of given string)
-    move.l #SYSCALL_NUM_PUTSTRING, %D0
-    move.l #0, %D1  | ch = 0
-    move.l #BUF,%D2 | p = #BUF
-    trap #0
-    bra LOOP
-
-******************************
-* タイマのテスト
-* ’******’ を表示し改行する．
-* ５回実行すると，RESET_TIMER をする．
-******************************
-TT:
-    movem.l %D0-%D7/%A0-%A6,-(%SP)
-    cmpi.w #5,TTC  | TTC カウンタで 5 回実行したかどうか数える
-    beq TTKILL     | 5 回実行したら，タイマを止める
-    move.l #SYSCALL_NUM_PUTSTRING,%D0
-    move.l #0, %D1    | ch = 0
-    move.l #TMSG, %D2 | p = #TMSG
-    move.l #8, %D3    | size = 8
-    trap #0
-
-    addi.w #1,TTC | TTC カウンタを 1 つ増やして
-    bra TTEND     | そのまま戻る
-TTKILL:
-    move.l #SYSCALL_NUM_RESET_TIMER,%D0
-    trap #0
-TTEND:
-    movem.l (%SP)+,%D0-%D7/%A0-%A6
-    rts
-
-****************************************************************
-*** 初期値のあるデータ領域
-****************************************************************
-.section .data
-TMSG:
-    .ascii "******\r\n"
-    .even
-TTC:
-    .dc.w 0
-    .even
 
 ****************************************************************
 *** 初期値の無いデータ領域
@@ -131,6 +66,7 @@ USR_STK:
     .ds.b 0x4000 | ユーザスタック領域
     .even
 USR_STK_TOP:     | ユーザスタック領域の最後尾
+******************************************************************
 /*; ---- end include main.s ----*/
 
 
@@ -143,6 +79,7 @@ USR_STK_TOP:     | ユーザスタック領域の最後尾
 .equ SYSCALL_NUM_PUTSTRING,   2 |文字列出力(PUTSTRING)|
 .equ SYSCALL_NUM_RESET_TIMER, 3 |タイマリセット|
 .equ SYSCALL_NUM_SET_TIMER,   4 |タイマセット|
+.equ SYSCALL_NUM_SKIPMT,      5 |SKIPMT
 /*
  * syscall_handler
  * %d0: syscall number
@@ -158,6 +95,9 @@ USR_STK_TOP:     | ユーザスタック領域の最後尾
 *****************************************	
 	
 syscall_handler:
+        cmpi.l #SYSCALL_NUM_SKIPMT, %D0
+        beq tmr1_interrupt
+
 	movem.l %D1-%D7/%A0-%A6, -(%SP)
 	cmpi.l #SYSCALL_NUM_GETSTRING, %D0   |D0==1?（鴻上）|
 	beq CALL_GETSTRING                   |→GETSTRING処理へ|
@@ -197,80 +137,51 @@ CALL_SET_TIMER:
 /* ---- begin include queue.s ---- */
 .section .text
 
-** ここからデータ領域までのコメント：河野
-*****************キューの初期化処理*******************************************************************
-Init_Q:
-	movem.l %d0-%d4/%a0-%a3,-(%sp)
-	moveq 	#0, %d0			/* d0: キュー番号かつカウンタ */
-	lea.l	Q_INFO, %a1		/* a1: Q_INFOの開始地点 */
-	lea.l	Q0_START, %a2 		/* a2: Q0の先頭番地 */
-	move.w	#B_SIZE, %d2		/* d2: 256 */
-	move.w	#Q_INFO_SIZE, %d3	/* d3: 20 (キュー１個分の情報量) */
-
-LOOP_Init:				/* d4: 計算用 */
-	move.l	%d0,	%d4
-	mulu	%d3,	%d4		/* d4 = d0 * Q_INFO_SIZE */
-	move.l	%d4,	%a0
-	add.l	%a1,	%a0		/* a0 = Q_INFO + d0 * Q_INFO_SIZE(各キュー情報の先頭) */
-	
-	move.l	%d0,	%d4			
-	mulu	%d2,	%d4		/* d4 = d0 * B_SIZE */
-	move.l	%d4,	%a3
-	add.l	%a2,	%a3		/* a3 = Q0_START + d0 * B_SIZE(各キューの先頭) */
-
-	move.l	%a3,	TOP_OFS(%a0)	
-	move.l	%a3,	OUT_OFS(%a0)
-	move.l	%a3,	IN_OFS(%a0)	/* TOP=OUT=IN=キューの先頭 */
-	
-	adda.l	#B_SIZE_MINUS,	%a3	/* a3=255 */
-	move.l	%a3,	BOTTOM_OFS(%a0) /* BOTTOM=キューの末尾 */
-	move.l	#0,	S_OFS(%a0)	/* S = 0(キューの要素は最初０ */
-
-	addq	#1,	%d0		/* Q1にも同様の操作 */
-	cmp	#2,	%d0
-	bne	LOOP_Init		/* キュー2つ分繰返し */
-	
-end_Init:	
-	movem.l (%sp)+, %d0-%d4/%a0-%a3
-	rts
-****************************************************************************************************
-
 
 ******INTERPUT*************************************************************************************
 ** 入力：d1.l（チャンネル）
 ** チャネル ch の送信キューからデータを一つ取り出し，実際に送信	
 INTERPUT:
-	movem.l %d0-%d2,-(%sp)
+	movem.l %d0-%d2/%a0-%a1,-(%sp)
 	
 	/* (1) */
 	move.w  #0x2700, %sr
 	/* (2) */
-	cmpi #0, %d1
-	bne	End_INTERPUT		|ch=0以外なら何もしない
+	cmpi.l #0, %d1
+	beq INTERPUT_CH0
+	cmpi.l #1, %d1
+	beq INTERPUT_CH1
+	bra End_INTERPUT		|ch=0,1以外なら何もしない
+INTERPUT_CH0:	
 	/* (3) */
 	moveq	#1, %d0
+	lea.l UTX1, %a0
+	lea.l USTCNT1, %a1
+	bra INTERPUT_COMMON
+INTERPUT_CH1:
+	moveq	#3, %d0
+	lea.l UTX2, %a0
+	lea.l USTCNT2, %a1
+INTERPUT_COMMON:
 	jsr	OUTQ			|送信キューからデータを一つ取り出し
 	*出力１：d0(失敗 0/ 成功 1 )
 	*出力２：d1（取り出した8bitデータ）
 	/* (4) */
 	cmpi #0, %d0
-	beq	INTERPUT_MASK		|取り出し失敗なら、送信割り込みをマスク（禁止）
+	beq INTERPUT_MASK		|取り出し失敗なら、送信割り込みをマスク（禁止）
 	/* (5) */
 	/* d1をUTX1に代入（下位８bit） */
-	ori #0x0800, %D1                | ヘッダを代入
-	move.w %D1, UTX1                | 送信
-	bra	End_INTERPUT
+	ori #0x0800, %d1                | ヘッダを代入
+	move.w %d1, (%a0)               | 送信
+	bra End_INTERPUT
 INTERPUT_MASK:
 	/* (4)' */		|送信失敗した場合、送信割り込み禁止
-	move.w	USTCNT1, %d2
+	move.w	(%a1), %d2
 	andi.w	#0xFFFB, %d2	| 0xFFFB = 1111111111111011 
-	move.w	%d2,	USTCNT1 | USTCNT1のTXEEを0にする 
-	bra End_INTERPUT
+	move.w	%d2, (%a1)    | USTCNT1のTXEEを0にする 
 End_INTERPUT:
-	movem.l (%sp)+, %d0-%d2
+	movem.l (%sp)+, %d0-%d2/%a0-%a1
 	rts
-
-	
 ******************************************************************************************************	
 
 *********PUTSTRING************************************************************************************
@@ -281,10 +192,21 @@ End_INTERPUT:
 ** 出力  ：実際に送信したデータ数 sz → %D0.L
 	
 PUTSTRING:
-	movem.l %d1-%d6/%a0,-(%sp)
+	movem.l %d1-%d6/%a0-%a1,-(%sp)
 	/* (1) */
-	cmpi 	#0, %d1		
-	bne	End_PUTSTRING	| ch=0以外なら何もしない
+	cmpi.l #0, %d1		
+	beq PUTSTRING_CH0
+	cmpi.l #1, %d1
+	beq PUTSTRING_CH1
+	bra	End_PUTSTRING	| ch=0,1以外なら何もしない
+PUTSTRING_CH0:
+        moveq #1, %d0
+	lea.l USTCNT1, %a1
+	bra PUTSTRING_COMMON
+PUTSTRING_CH1:
+        moveq #3, %d0
+	lea.l USTCNT2, %a1
+PUTSTRING_COMMON:
 	/* (2) */
 	moveq	#0, %d4  	| d4 = sz = 0 
 	movea.l	%d2, %a0 	| a0 = i = p 
@@ -296,7 +218,6 @@ LOOP_PUTSTRING:
 	cmp	%d3, %d4	| 送信サイズ == 送信した数？
 	beq	PUTSTRING_9
 	/* (5) */
-	moveq	#1, %d0
 	move.b	(%a0), %d1	| a0:データ読み込み先の先頭アドレス
 	jsr	INQ
 	*d0 :キュー番号
@@ -309,191 +230,164 @@ LOOP_PUTSTRING:
 	addq	#1, %d4		| 送信した数に１を足す
 	addq	#1, %a0		| 読み込むデータを次に
 	/* (8) */
-	bra 	LOOP_PUTSTRING	| 全て送信 or INQ失敗まで続ける
+	bra 	LOOP_PUTSTRING | 全て送信 or INQ失敗まで続ける
 PUTSTRING_9:
 	/* (9) */
-	move.w	USTCNT1, %d6
+	move.w	(%a1), %d6
 	ori.w	#0x0004, %d6	| 0xFFFB = 0000000000000100 
-	move.w	%d6,	USTCNT1 | 送信割込み許可 
+	move.w	%d6, (%a1)      | 送信割込み許可 
 PUTSTRING_10:
 	/* (10) */
 	move.l	%d4, %d0	| d0(出力) = sz(送信した数)
 End_PUTSTRING:
-	movem.l (%sp)+, %d1-%d6/%a0
+	movem.l (%sp)+, %d1-%d6/%a0-%a1
 	rts
+	
 ******************************************************************************************************
+*****************************
+** キュー構造体定義
+******************************
+.equ Q_SIZE, 256              
+.equ Q_COUNT, 4               
+.equ top_ofs,     Q_SIZE     
+.equ bottom_ofs,  Q_SIZE+4
+.equ out_ofs,     Q_SIZE+8
+.equ in_ofs,      Q_SIZE+12
+.equ s_ofs,       Q_SIZE+16
+.equ Q_STRIDE,    Q_SIZE+20 |キュー構造体の全長
+**********************
+** キューの初期化処理
+**********************
+Init_Q:
+	movem.l	%d0-%d1/%a0-%a1,-(%sp)
+	moveq #Q_COUNT, %d0
+	subq #1, %d0
+	lea.l QUEUE0, %a0 | %a0 = QUEUE0の開始アドレス
+	move.l #Q_SIZE, %d1
+	subq #1, %d1      | %d1 = #255
 
+Init_Q_LOOP:
+	movea.l %a0, %a1
+	adda.l %d1, %a1   | %a1 = QUEUEno の末尾アドレス
+	move.l %a0, (%a0, top_ofs)
+	move.l %a0, (%a0, out_ofs)
+	move.l %a0, (%a0, in_ofs)
+	move.l %a1, (%a0, bottom_ofs)
+	move.l #0, (%a0, s_ofs)
 	
-**********INQ**********************************************************************
-** 入力１：d0（キュー番号）
-** 入力２：d1（8bitデータ）
-** 出力　：d0(失敗 0/ 成功 1 )
+	adda.l #Q_STRIDE, %a0
+	dbra   %d0, Init_Q_LOOP
+
+	movem.l	(%sp)+,%d0-%d1/%a0-%a1
+	rts
+	
+***********************************
+** INQ: キューへのデータ書き込み
+** 入力 d0.l: キューインデックス
+**      d1.b: 書き込むデータ
+** 出力 d0.l: 結果(00:失敗, 00以外:成功)
+***********************************
 INQ:
-	/* (1) */
-	move.w %sr, -(%sp)
-	movem.l %d2-%d7/%a0-%a6,-(%sp)
-
-	/* (2) */
-	move.w #0x2700,%sr
-
-	** キューd0について、キュー情報の先頭・キューの先頭のアドレスをそれぞれ取得
-	******************************************************************************************
-	lea.l	Q_INFO, %a1		/* a1: Q_INFOの開始地点 */
-	lea.l	Q0_START, %a2 		/* a2: Q0の先頭番地 */
-	move.w	#B_SIZE, %d2		/* d2: 256 */
-	move.w	#Q_INFO_SIZE, %d3	/* d3: 20 (キュー１個分の情報量) */
-	
-	move.l	%d0,	%d4
-	mulu	%d3,	%d4		/* d4 = d0 * Q_INFO_SIZE */
-	move.l	%d4,	%a0
-	add.l	%a1,	%a0		/* a0 = Q_INFO + d0 * Q_INFO_SIZE(各キュー情報の先頭) */
-	
-	move.l	%d0,	%d4			
-	mulu	%d2,	%d4		/* d4 = d0 * B_SIZE */
-	move.l	%d4,	%a3
-	add.l	%a2,	%a3		/* a3 = Q0_START + d0 * B_SIZE(各キューの先頭) */
-	******************************************************************************************
-
-	/* (3) */
-	move.l	S_OFS(%a0), %d4
-	cmpi.l	#256, %d4		| s==256?（満杯のキューに入れようとしているか？）
-	beq	INQ_Failure	
-	bra	INQ_Step1
-INQ_Failure:
-	moveq	#0, %d0
-	bra	END_INQ			| 0（失敗）を出力し、終了
-INQ_Step1:
-	/* (4) */
-	move.l	IN_OFS(%a0), %a4	| a4:キュー中、データを入れるべき番地
-	move.b	%d1, (%a4)		| m[in] = data
-
-	/* (5) */ ** inがキューの終端に来たら、循環させる
-	movea.l	IN_OFS(%a0), %a4	| a4 = in
-	movea.l	BOTTOM_OFS(%a0), %a5	| a5 = bottom
-	cmpa.l	%a4, %a5		| in == bottom?
-	beq	BACK_IN			
-	movea.l	IN_OFS(%a0), %a4
-	addq	#1, %a4
-	move.l	%a4, IN_OFS(%a0)	| in++
-	bra	INQ_Step2
-BACK_IN:
-	movea.l	TOP_OFS(%a0), %a4
-	move.l	%a4, IN_OFS(%a0)	| in = top
-INQ_Step2:
-	/* (6) */
-	move.l	S_OFS(%a0), %d4
-	addq.l	#1, %d4			
-	move.l	%d4, S_OFS(%a0)		| s++
-	moveq	#1, %d0			| d0 = 1（成功）
-	
-END_INQ:	
-	/* (7) */
-	movem.l (%sp)+, %d2-%d7/%a0-%a6
-	move.w (%sp)+, %sr
+	movem.l	%d1-%d2/%a0-%a2,-(%sp)
+	move.w	%sr,-(%sp)
+	move.w	#0x2700,%sr | 走行レベル７
+	jsr	PUT_BUF
+	move.w	(%sp)+,%sr  | 旧走行レベルの回復
+	movem.l	(%sp)+,%d1-%d2/%a0-%a2
 	rts
 
-***********************************************************************************
+****************************************
+** PUT_BUF
+****************************************
+PUT_BUF:
+	mulu #Q_STRIDE, %d0
+	lea.l QUEUE0, %a0
+	adda.l %d0, %a0   |%a0 = キューno の先頭アドレス
 
+	move.l (%a0,s_ofs), %d2
+	cmpi.l #Q_SIZE, %d2
+	beq PUT_BUF_FALSE
+	
+	movea.l (%a0, in_ofs), %a1
+	move.b %d1,(%a1)+
 
-**********OUTQ**********************************************************************
-** 入力　：d0（キュー番号）
-** 出力１：d0(失敗 0/ 成功 1 )
-** 出力２：d1（取り出した8bitデータ）
+	move.l (%a0, bottom_ofs), %a2    | %a2 = キュー終端アドレス
+	cmpa.l %a2, %a1
+	bls PUT_BUF_STEP1           | in がキューの終端をこえたら
+	move.l %a0, %a1             | %a1 = キューnoの先頭アドレス
+	
+PUT_BUF_STEP1:	
+	move.l %a1, (%a0, in_ofs)
+	addq.l #1, (%a0, s_ofs)
+	moveq.l #1, %d0
+	bra PUT_BUF_end
 
+PUT_BUF_FALSE:
+	move.l	#0, %d0
+
+PUT_BUF_end:
+	rts
+
+***********************************
+** OUTQ : キューへのデータ書き込み
+** 入力 d0.l : キュー番号
+** 出力 d0.l : 結果(00:失敗, 00以外:成功)
+***********************************
 OUTQ:
-	/* (1) */
-	move.w %sr, -(%sp)
-	movem.l %d2-%d7/%a0-%a6,-(%sp) 
-
-	/* (2) */
-	move.w #0x2700,%sr
-
-	** キューd0について、キュー情報の先頭・キューの先頭のアドレスをそれぞれ取得
-	******************************************************************************************
-	lea.l	Q_INFO, %a1		/* a1: Q_INFOの開始地点 */
-	lea.l	Q0_START, %a2 		/* a2: Q0の先頭番地 */
-	move.w	#B_SIZE, %d2		/* d2: 256 */
-	move.w	#Q_INFO_SIZE, %d3	/* d3: 20 (キュー１個分の情報量) */
-	
-	move.l	%d0,	%d4
-	mulu	%d3,	%d4		/* d4 = d0 * Q_INFO_SIZE */
-	move.l	%d4,	%a0
-	add.l	%a1,	%a0		/* a0 = Q_INFO + d0 * Q_INFO_SIZE(各キュー情報の先頭) */
-	
-	move.l	%d0,	%d4			
-	mulu	%d2,	%d4		/* d4 = d0 * B_SIZE */
-	move.l	%d4,	%a3
-	add.l	%a2,	%a3		/* a3 = Q0_START + d0 * B_SIZE(各キューの先頭) */
-	******************************************************************************************
-
-	/* (3) */
-	move.l	S_OFS(%a0), %d4
-	cmpi.l	#0, %d4
-	beq	OUTQ_Failure		| s == 0?（空のキューから取り出そうとしている？）
-	bra	OUTQ_Step1
-OUTQ_Failure:
-	moveq	#0, %d0
-	bra	END_OUTQ
-OUTQ_Step1:
-	/* (4) */
-	move.l	OUT_OFS(%a0), %a4	| a4 = out
-	move.b	(%a4), %d1		| d1 = m[out]
-
-	/* (5) */
-	movea.l	OUT_OFS(%a0), %a4	| a4 = out
-	movea.l	BOTTOM_OFS(%a0), %a5	| a5 = bottom
-	cmpa.l	%a4, %a5		| out == bottom?（取り出し場所のポインタが、キューの末尾に到達？）
-	beq	BACK_OUT
-	movea.l	OUT_OFS(%a0), %a4
-	addq	#1, %a4
-	move.l	%a4, OUT_OFS(%a0)	| out++
-	bra	OUTQ_Step2
-BACK_OUT:
-	movea.l	TOP_OFS(%a0), %a4
-	move.l	%a4, OUT_OFS(%a0)	| out = top
-OUTQ_Step2:
-	/* (6) */
-	move.l	S_OFS(%a0), %d4		
-	subq.l	#1, %d4
-	move.l	%d4, S_OFS(%a0)		| s--
-	moveq	#1, %d0			| d0 = 1（成功）
-	
-END_OUTQ:	
-	/* (7) */
-	movem.l (%sp)+, %d2-%d7/%a0-%a6
-	move.w (%sp)+, %sr
+	movem.l	%d2/%a0-%a2,-(%sp)
+	move.w	%sr,-(%sp)
+	move.w	#0x2700,%sr
+	jsr	GET_BUF
+	move.w	(%sp)+,%sr
+	movem.l	(%sp)+,%d2/%a0-%a2
 	rts
 
-***********************************************************************************
+****************************************
+** GET_BUF
+****************************************
+GET_BUF:
+	moveq.l #0, %d1
+	mulu #Q_STRIDE, %d0
+	lea.l QUEUE0, %a0
+	adda.l %d0, %a0   /* %a0 = 先頭 */
 
-
+	move.l (%a0,s_ofs), %d2
+	cmpi.l #0, %d2
+	beq GET_BUF_FALSE
 	
+	movea.l (%a0, out_ofs), %a1
+	move.b (%a1), %d1
+	move.b #0, (%a1)+
+
+	move.l (%a0, bottom_ofs), %a2    /* %a2 = キュー終端アドレス */
+	cmpa.l %a2, %a1
+	bls GET_BUF_STEP1           /* 終端に到達したら */
+	move.l %a0, %a1              /* %a1 = キュー先頭アドレス */
+	
+GET_BUF_STEP1:	
+	move.l %a1, (%a0, out_ofs)
+	subq.l   #1, (%a0, s_ofs)
+	moveq.l #1, %d0
+	bra GET_BUF_end
+
+GET_BUF_FALSE:
+	move.l	#0,%d0
+
+GET_BUF_end:
+	rts
+
+******************************
+** キュー用のメモリ領域確保
+******************************
 .section .data
-***********************************
-** キュー用のメモリ領域確保と定数定義
-***********************************
-	.equ	B_SIZE, 	256
-	.equ	B_SIZE_MINUS,	255
-	.equ	Q_NUM,		2
-	
-	.equ	TOP_OFS,	0
-	.equ	OUT_OFS,	4
-	.equ	IN_OFS,		8
-	.equ	BOTTOM_OFS,	12
-	.equ	S_OFS,		16
-	.equ	Q_INFO_SIZE,	20
+.even
+QUEUE0: .ds.b Q_STRIDE
+QUEUE1: .ds.b Q_STRIDE
+QUEUE2: .ds.b Q_STRIDE
+QUEUE3: .ds.b Q_STRIDE
 
-	.even
-Q0_START: 	.ds.b	B_SIZE
-Q1_START: 	.ds.b	B_SIZE
-	.even
-Q_INFO:
-	.ds.b	Q_INFO_SIZE * Q_NUM
-/*; ---- end include queue.s ----*/
-
-/* ---- begin include interget.s ---- */
 .section .text
-
+.even
 ***************************
 ** %d1.l = ch
 ** %d2.b = 受信データ  data
@@ -501,12 +395,17 @@ Q_INFO:
 ***************************
 /* 受信レジスタの値はすでにd2に格納されている。あとは送信キューに入れるだけ。（河野） */	
 INTERGET:
-	cmpi.l #0, %d1    /* ch != 0 なら終了 */                    
-	bne INTERGET_END 
-	move.b %d2, %d1   /* %d1 = data */
+	cmpi.l #0, %d1    /* ch != 0,1 なら終了 */
+	beq INTERGET_CH0
+	cmpi.l #1, %d1
+	bne INTERGET_END
+	moveq.l #2, %d0
+	bra INTERGET_DO 
+INTERGET_CH0:	
 	moveq.l #0, %d0   /* キュー番号を 0 に設定 */          
-	jsr INQ           /* INQ(0, data) */
-
+INTERGET_DO:
+    move.b %d2, %d1   /* %d1 = data */
+	jsr INQ           /* INQ(2, data) */
 INTERGET_END:
 	rts
 	
@@ -519,26 +418,30 @@ INTERGET_END:
 /* 受信キューにあるsize個のデータを、p番地に書き込み（河野） */	
 GETSTRING:
 	movem.l %d4/%a0, -(%sp)
-	cmp.l #0, %d1            /* ch != 0 なら終了 */                  
-	bne GETSTRING_END      
-	moveq.l #0, %d4          /* %d4 = 0 , %d4は%d0(=sz)の一時保存レジスタ */                    
-	movea.l %d2, %a0         /* %a0 = p */       
-
-GETSTRING_STEP1:
+	cmp.l #0, %d1            /* ch != 0,1 なら終了 */
+	beq GETSTRING_CH0
+	cmp.l #1, %d1       
+	beq GETSTRING_CH1       
+	bra GETSTRING_END
+GETSTRING_CH0:
+	moveq.l #0, %d0          /* %d0 = 0, キュー番号を0に */                  
+	bra GETSTRING_COMMON	
+GETSTRING_CH1:
+	moveq.l #2, %d0         /* %d0 = 2, キュー番号を2に */
+GETSTRING_COMMON:
+	moveq.l #0, %d4
+	movea.l %d2, %a0
+GETSTRING_LOOP:
 	cmp.l %d4, %d3           /* %d4 = size なら STEP2 へ */               
-	beq GETSTRING_STEP2
-	moveq.l #0, %d0          /* %d0 = 0, キュー番号を0に */
+	beq GETSTRING_END
 	jsr OUTQ                 /* OUTQ(0,data) */      
 	cmpi.l #0, %d0           /* 復帰値 %d0 が 0 なら STEP2 へ */           
-	beq GETSTRING_STEP2      
+	beq GETSTRING_END      
 	move.b %d1, (%a0)+       /* %a0 番地へ data をコピー, %a0++ */                               
 	addq.l #1, %d4           /* %d4++ */      
-	bra GETSTRING_STEP1      
-
-GETSTRING_STEP2:
-	move.l %d4, %d0          /* %d0 = %d4 */  
-
+	bra GETSTRING_LOOP  
 GETSTRING_END:
+	move.l %d4, %d0          /* %d0 = %d4 */  
 	movem.l (%sp)+, %d4/%a0
 	rts
 /*; ---- end include interget.s ----*/
@@ -619,14 +522,46 @@ UART1_INTR_SKIP_PUT:
 UART1_INTR_SKIP_GET:
     movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
     rte
-
+    
+    
+    
+uart2_interrupt:
+/*送信割り込みベクタと受信割り込みベクタが同じであるため受信レジスタ、送信レジスタの値で送受信割り込みを区別する(室原)*/
+    movem.l %D0-%D7/%A0-%A6, -(%SP) | 使用するレジスタをスタックに保存
+    move.w UTX2, %D0                | UTX2をD0レジスタにコピーし保存しておく
+    move.w %D0, %D1                 | 計算用にD1レジスタにコピー
+    lsr.w #8, %D1
+    lsr.w #7, %D1                   | 15回右シフト（上位ビットは0埋め）
+    cmpi.w #1, %D1                  | 0=FIFOが空ではない, 1=空である（割り込み発生）
+    bne UART2_INTR_SKIP_PUT         | 送信割り込みでないならスキップ 受信割り込みの処理に入る(室原)
+    move.l #1, %D1                  | ch=%D1.L=1
+    jsr INTERPUT
+UART2_INTR_SKIP_PUT:
+    move.w URX2, %D3                | 受信レジスタ URX2 を %D3.W にコピー
+    move.b %D3, %D2                 | %D3.W の下位 8bit(データ部分) を %D2.B にコピー
+    lsr.w #8, %D3
+    lsr.w #5, %D3                   | 13回右シフト（上位ビットは0埋め）
+    and.w #0x1, %D3                 | 0bit目以外を0に
+    cmpi.w #1, %D3                  | 0 = 受信 FIFO にデータがない．1 = データがある
+    bne UART2_INTR_SKIP_GET
+    move.l #1, %D1                  | ch = %D1.L = 1, (data = %D2.Bは代入済)
+    jsr INTERGET
+UART2_INTR_SKIP_GET:
+    movem.l (%SP)+, %D0-%D7/%A0-%A6 | レジスタを復帰
+    rte
+    
+    
+    
 tmr1_interrupt:
     movem.l %D0-%D7/%A0-%A6,-(%SP)  | 使用するレジスタをスタックに保存
+    cmpi.l #5, %D0
+    beq TMR1_TRUE
     move.w TSTAT1, %D0              | %D0=TSTAT1
     and.w #0x1, %D0                 | 0bit目以外を0に
     cmp.w #0, %D0
     beq TMR1_END                    | TSTAT1 の第 0 ビットが 1 となっているかどうかをチェックする．0 ならば rte で復帰 
     /*TASTAT1の第0ビットが0のときはコンペアイベントが起きていないためタイマ割り込みは起きてない, よって終了処理に移る->今回のタイマはコンペアイベントのみしか使わないため第0ビットだけ調べればよい(室原)*/
+TMR1_TRUE:    
     clr.w TSTAT1                    | TSTAT1 を 0 クリア
     jsr CALL_RP /*タイマ割り込みが発生した時に処理すべきルーチンに移動するためにCALL_RPを呼び出す(室原)*/
 TMR1_END:

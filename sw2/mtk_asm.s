@@ -14,6 +14,8 @@ first_task:
     lea.l task_tab, %A1        | %A1.l = task_tab
     add.l %D1, %A1             | %A1.l = &task_tab[curr_task]
 
+    move.l %sp, SINGLE_SSP
+
     * 2. USP，SSP の値の回復
     * %SSP = &task_tab[curr_task]->stack_ptr
     move.l TCB_TYPE_STACK_PTR_OFFSET(%A1), %SP
@@ -25,8 +27,13 @@ first_task:
 
     * 4. ユーザタスクの起動（SR,PCの復帰）
     rte
+BACKTO_SINGLE:
+    rts
+.data
+.even
+SINGLE_SSP: .ds.l 1
 
-
+.section .text
 .global swtch
 .even
 swtch:
@@ -107,7 +114,14 @@ init_timer:
 	move.w #10000, %D1 /*1秒に設定*/
 	move.l #hard_clock, %D2 /*hard_clockを呼び出すよう設定*/
 	trap #0
-    rts
+        rts
+
+.global skipmt
+.even
+skipmt:
+        move.l #SYSCALL_NUM_SKIPMT, %D0
+        trap #0
+        rts
 
 .include "semasema.s"
 

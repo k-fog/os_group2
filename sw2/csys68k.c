@@ -49,3 +49,25 @@ int write (int fd, char *buf, int nbytes)
   }
   return (nbytes);
 }
+
+
+#include <stdarg.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <stdio.h>
+FILE* com0in;
+FILE* com0out;
+FILE* com1in;
+FILE* com1out;
+
+int fcntl(int fd, int cmd, ...){
+    if (cmd == F_GETFL) return O_RDWR;
+    else    return 0;
+}
+
+void fd_mapping() {
+    com0in  = fdopen(3, "r");
+    com0out = fdopen(3, "w");
+    com1in  = fdopen(4, "r");
+    com1out = fdopen(4, "w"); 
+}

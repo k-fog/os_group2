@@ -43,7 +43,7 @@ void set_task(void (*task_addr)()) {
             break;
         }
     }
-    if (task_id == NULLTASKID) return; // 空きがない
+    if (task_id == NULLTASKID) {printf("full"); return;} // 空きがない
     new_task = task_id; // 空いていたTCBのIDをnew_taskに代入
 
     TCB_TYPE *tcb = &task_tab[new_task];
@@ -129,6 +129,21 @@ void p_body(int ID) {
     sema->count -= 1;
     // 2.セマフォが獲得できなけれれば sleep(セマフォの ID)
     if (sema->count < 0) sleep(ID);
+}
+
+void waitp_body(SEMAPHORE_ID_TYPE sem_id) {
+    SEMAPHORE_TYPE *sp;
+    sp = &semaphore[sem_id];
+    if (sp->count != -(sp->nst - 1)) {
+        p_body(sem_id);
+    } else {
+	for (int k = 0; k < sp->nst - 1; k++) {
+	    v_body(sem_id);
+	addq(&task_tab[ready], curr_task);
+	sched();
+	swtch();
+	}	
+    }
 }
 
 void v_body(int ID) {

@@ -26,23 +26,23 @@ void dump() {
 }
 
 void task1() {
-    printf("task1 started\n");
-    P(1);
     while (1) {
-        printf("task1\n");
-        V(2);
-        P(1);
+	printf("task1 \n");
+        waitP(1);
     }
 }
 
 void task2() {
-    printf("task2 started\n");
-    V(1);
-    P(2);
     while (1) {
         printf("task2\n");
-        V(1);
-        P(2);
+        waitP(0);
+    }
+}
+
+void task3() {
+    while (1) {
+        printf("task3\n");
+        waitP(0);
     }
 }
 
@@ -50,12 +50,12 @@ int main() {
     printf("BOOTING\n");
     init_kernel();
     printf("[OK] init_kernel\n");
-
-    semaphore[1].count = 0; 
-    semaphore[2].count = 0;
     
+    semaphore[1].count =0;
+    semaphore[1].nst = 3;
     set_task(task1);
     set_task(task2);
+    set_task(task3);
 
     if (DEBUG) printf("[DEBUG] sizeof TCB_TYPE = %ld\n", sizeof(TCB_TYPE));
     if (DEBUG) printf("[DEBUG] ready = %d\n", ready);
