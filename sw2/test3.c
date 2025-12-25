@@ -10,6 +10,7 @@ Cell board[BOARD_W * BOARD_H];
 
 // ボードを描画
 void fdraw(FILE *com) {
+    P(0);
     fprintf(com, "   ");
     for (int j = 0; j < BOARD_W; j++) {
         fprintf(com, "% 2d", j);
@@ -26,6 +27,7 @@ void fdraw(FILE *com) {
         }
         fprintf(com, "\n");
     }
+    V(0);
 }
 
 // ボードにコマを置く。連続するコマの数を返す
@@ -109,7 +111,7 @@ void task2() {
             user_input(com1in, com1out, &x, &y);
             P(1);
             if (turn % 2 != 1) {
-                fprintf(com1out, "please wait...\n*");
+                fprintf(com1out, "please wait...\n");
                 n = -1;
             }
             else n = put(WHITE, x, y);

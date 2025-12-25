@@ -46,7 +46,7 @@ void set_task(void (*task_addr)()) {
             break;
         }
     }
-    if (task_id == NULLTASKID) {printf("full"); return;} // 空きがない
+    if (task_id == NULLTASKID) return; // 空きがない
     new_task = task_id; // 空いていたTCBのIDをnew_taskに代入
 
     TCB_TYPE *tcb = &task_tab[new_task];
@@ -54,11 +54,7 @@ void set_task(void (*task_addr)()) {
     tcb->status = TASK_INUSE;      // statusを登録
     tcb->stack_ptr = init_stack(new_task); // stack_ptrを登録
 
-    if (ready == NULLTASKID) {
-        ready = new_task; // readyキューが空ならnew_taskを追加
-        task_tab[ready].next = NULLTASKID;
-    }
-    else addq(&task_tab[ready], new_task);
+    addq(&ready, new_task);
     printf("[OK] set_task\n");
 }
 
@@ -83,13 +79,16 @@ void *init_stack(TASK_ID_TYPE id) {
     return ssp;
 }
 
-void addq(TCB_TYPE* q_ptr, TASK_ID_TYPE task_id) {
+void addq(TASK_ID_TYPE* q, TASK_ID_TYPE task_id) {
     if (DEBUG) printf("[DEBUG] addq: added task_id = %d\n", task_id);
     // 引数にキューへのポインタとタスクの ID を取り，その TCB をキューの最後尾に登録する．
-    TCB_TYPE *cur = q_ptr;
-    while (cur->next != NULLTASKID) cur = &task_tab[cur->next];
-    // ここに到達した時点でcur->nextはNULLTASKID
-    cur->next = task_id; // 最後尾に追加
+    if (*q == NULLTASKID) {
+        *q = task_id;
+    } else {
+        TASK_ID_TYPE cur = *q;
+        while (task_tab[cur].next != NULLTASKID) cur = task_tab[cur].next;
+        task_tab[cur].next = task_id; // 最後尾に追加
+    }
     task_tab[task_id].next = NULLTASKID; // 新しい最後尾
 }
 
@@ -134,21 +133,6 @@ void p_body(int ID) {
     if (sema->count < 0) sleep(ID);
 }
 
-void waitp_body(SEMAPHORE_ID_TYPE sem_id) {
-    SEMAPHORE_TYPE *sp;
-    sp = &semaphore[sem_id];
-    if (sp->count != -(sp->nst - 1)) {
-        p_body(sem_id);
-    } else {
-	for (int k = 0; k < sp->nst - 1; k++) {
-	    v_body(sem_id);
-	addq(&task_tab[ready], curr_task);
-	sched();
-	swtch();
-	}	
-    }
-}
-
 void v_body(int ID) {
     if (DEBUG) printf("[DEBUG] v_body(%d)\n", ID);
     // セマフォIDがスタックに積まれている
@@ -162,11 +146,7 @@ void v_body(int ID) {
 void sleep(int ch) {
     if (DEBUG) printf("[DEBUG] sleep(%d)\n", ch);
     SEMAPHORE_TYPE *sema = &semaphore[ch]; /*セマフォのポインタの取得p38*/
-    if (sema->task_list == NULLTASKID) {
-        sema->task_list = curr_task;
-        task_tab[curr_task].next = NULLTASKID;
-    }
-    else addq(&task_tab[sema->task_list], curr_task); /*現在実行中のタスクcurrent_taskを、セマフォの待ち行列(task_list)の末尾に追加する。*/
+    addq(&sema->task_list, curr_task); /*現在実行中のタスクcurrent_taskを、セマフォの待ち行列(task_list)の末尾に追加する。*/
     task_tab[curr_task].status = TASK_SLEEP; /*タスクの状態を管理(TCBのstatusを管理する)*/
     sched();
     swtch();    
@@ -176,14 +156,22 @@ void wakeup(int ch){
     if (DEBUG) printf("[DEBUG] wakeup(%d)\n", ch);
     SEMAPHORE_TYPE *sema = &semaphore[ch];
     TASK_ID_TYPE woken_task_id = removeq(&task_tab[sema->task_list]);
-    
-    if (woken_task_id != NULLTASKID) {
-        if (ready == NULLTASKID) {
-            ready = woken_task_id; 
-            task_tab[ready].next = NULLTASKID;
-        }
-        else addq(&task_tab[ready], woken_task_id);
-        task_tab[woken_task_id].status = TASK_READY;
+    addq(&ready, woken_task_id);
+    task_tab[woken_task_id].status = TASK_READY;
+}
+
+void waitp_body(SEMAPHORE_ID_TYPE sem_id) {
+    SEMAPHORE_TYPE *sp;
+    sp = &semaphore[sem_id];
+    if (sp->count != -(sp->nst - 1)) {
+        p_body(sem_id);
+    } else {
+        for (int k = 0; k < sp->nst - 1; k++) {
+            v_body(sem_id);
+            addq(&ready, curr_task);
+            sched();
+            swtch();
+        }	
     }
 }
 
@@ -198,4 +186,3 @@ void fd_mapping() {
     com1in  = fdopen(4, "r");
     com1out = fdopen(4, "w");
 }
-
