@@ -8,10 +8,9 @@
 #define BOARD_W 40
 #define BOARD_H 20
 #define BAR_W    5
-#define AT(x, y) ((x) + ((y) * BOARD_W))
 
-#define DRAW_INTERVAL 1000
-#define UPDATE_INTERVAL 3000
+#define DRAW_INTERVAL 100
+#define UPDATE_INTERVAL 1000
 
 int ball_x, ball_y;
 int ball_dx, ball_dy;
@@ -22,8 +21,8 @@ void setup() {
     ball_y = 0;
     ball_dx = 1;
     ball_dy = 1;
-    bar1 = (BOARD_H - BAR_W) / 2;
-    bar2 = (BOARD_H - BAR_W) / 2;
+    bar1 = 15;
+    bar2 = 15;
 }
 
 void update() {
@@ -48,7 +47,6 @@ void update() {
 }
 
 void fdraw(FILE *com) {
-    fprintf(com, "\f");
     P(DRAW_SEMA);
     P(UPDATE_SEMA);
     for (int i = 0; i < BOARD_H; i++) {
@@ -101,6 +99,18 @@ void task4() {
         char input = inbyte(0);
         if (input == 'a') bar1--;
         else if (input == 'd') bar1++;
+        if (bar1 + BAR_W <= 0) bar1 = BOARD_W - BAR_W;
+        else if (BOARD_W < bar1) bar1 = 0;
+    }
+}
+
+void task5() {
+    while (1) {
+        char input = inbyte(1);
+        if (input == 'a') bar2--;
+        else if (input == 'd') bar2++;
+        if (bar2 + BAR_W <= 0) bar2 = BOARD_W - BAR_W;
+        else if (BOARD_W < bar2) bar2 = 0;
     }
 }
 
@@ -117,6 +127,7 @@ int main() {
     set_task(task2);
     set_task(task3);
     set_task(task4);
+    set_task(task5);
     
     begin_sch();
 }
