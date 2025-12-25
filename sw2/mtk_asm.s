@@ -86,9 +86,17 @@ init_timer:
 	trap #0
 	/*タイマのセットをする*/
 	move.l #SYSCALL_NUM_SET_TIMER, %D0
-	move.w #10000, %D1 /*1秒に設定*/
+	move.w #100, %D1 /*1秒に設定*/
 	move.l #hard_clock, %D2 /*hard_clockを呼び出すよう設定*/
 	trap #0
+    rts
+
+
+.global skipmt
+.even
+skipmt:
+    move.l #SYSCALL_NUM_SKIPMT, %D0
+    trap #0
     rts
 
 .include "semasema.s"
