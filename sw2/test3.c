@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include "mtk_c.h"
 
 #define DRAW_SEMA 0
@@ -9,19 +10,26 @@
 #define BOARD_H 20
 #define BAR_W    5
 
-#define DRAW_INTERVAL 100
-#define UPDATE_INTERVAL 1000
+#define DRAW_INTERVAL 1
+#define UPDATE_INTERVAL 1500
 
 int ball_x, ball_y;
+int ball_prev_x[2];
+int ball_prev_y[2];
+int prev_top = 0;
 int ball_dx, ball_dy;
 int bar1, bar2;
 int score1, score2;   // プレイヤ1/2のスコア
 
-void reset_ball(int toward_top) {
+void reset_ball(bool toward_top) {
     ball_x = BOARD_W / 2;
     ball_y = BOARD_H / 2;
     ball_dx = 1;
     ball_dy = toward_top ? -1 : 1;
+    for (int i = 0; i < 2; i++) {
+        ball_prev_x[i] = -1;
+        ball_prev_y[i] = -1;
+    }
 }
 
 void setup() {
@@ -36,6 +44,10 @@ void setup() {
 void update() {
     P(UPDATE_SEMA);
 
+    ball_prev_x[1] = ball_prev_x[0];
+    ball_prev_x[0] = ball_x;
+    ball_prev_y[1] = ball_prev_y[0];
+    ball_prev_y[0] = ball_y;
     ball_x += ball_dx;
     ball_y += ball_dy;
 
@@ -56,7 +68,7 @@ void update() {
         } else {
             // P1の得点
             score1++;
-            reset_ball(1);   // 次は上方向へ
+            reset_ball(true);   // 次は上方向へ
         }
     }
 
@@ -68,7 +80,7 @@ void update() {
         } else {
             // P2の得点
             score2++;
-            reset_ball(0);   // 次は下方向へ
+            reset_ball(false);   // 次は下方向へ
         }
     }
 
@@ -112,6 +124,12 @@ void fdraw(FILE *com, int player) {
             // 下バー（プレイヤ1）は world_y == BOARD_H - 1
             if (world_y == BOARD_H - 1 && bar1 <= x && x < bar1 + BAR_W) {
                 ch = '#';
+            }
+            // 残像
+            for (int i = 0; i < 2; i++) {
+                if (ball_prev_x[i] == x && ball_prev_y[i] == world_y) {
+                    ch = '.';
+                }
             }
             // ボールは最優先
             if (ball_x == x && ball_y == world_y) {
