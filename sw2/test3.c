@@ -13,6 +13,9 @@
 #define DRAW_INTERVAL 1
 #define UPDATE_INTERVAL 1500
 
+enum {GAME, RESULT} game_state;
+#define GAME_END_POINT 3
+
 int ball_x, ball_y;
 int ball_prev_x[2];
 int ball_prev_y[2];
@@ -20,11 +23,12 @@ int prev_top = 0;
 int ball_dx, ball_dy;
 int bar1, bar2;
 int score1, score2;   // プレイヤ1/2のスコア
+int update_frame = 0;
 
 void reset_ball(bool toward_top) {
     ball_x = BOARD_W / 2;
     ball_y = BOARD_H / 2;
-    ball_dx = 1;
+    ball_dx = update_frame % 2 == 0 ? -1 : 1;
     ball_dy = toward_top ? -1 : 1;
     for (int i = 0; i < 2; i++) {
         ball_prev_x[i] = -1;
@@ -33,21 +37,22 @@ void reset_ball(bool toward_top) {
 }
 
 void setup() {
+    game_state = GAME;
     score1 = 0;
     score2 = 0;
 
     reset_ball(0);   // 最初はプレイヤ1側へ
     bar1 = 15;       // 下（プレイヤ1）
     bar2 = 15;       // 上（プレイヤ2）
+    update_frame = 0;
 }
 
 void update() {
     P(UPDATE_SEMA);
 
-    ball_prev_x[1] = ball_prev_x[0];
-    ball_prev_x[0] = ball_x;
-    ball_prev_y[1] = ball_prev_y[0];
-    ball_prev_y[0] = ball_y;
+    ball_prev_x[prev_top] = ball_x;
+    ball_prev_y[prev_top] = ball_y;
+    prev_top = (prev_top + 1) % 2;
     ball_x += ball_dx;
     ball_y += ball_dy;
 
@@ -68,6 +73,7 @@ void update() {
         } else {
             // P1の得点
             score1++;
+            if (score1 == GAME_END_POINT) game_state = RESULT;
             reset_ball(true);   // 次は上方向へ
         }
     }
@@ -80,6 +86,7 @@ void update() {
         } else {
             // P2の得点
             score2++;
+            if (score2 == GAME_END_POINT) game_state = RESULT;
             reset_ball(false);   // 次は下方向へ
         }
     }
@@ -145,24 +152,45 @@ void fdraw(FILE *com, int player) {
     V(DRAW_SEMA);
 }
 
+void fdraw_result(FILE *com, int player) {
+    fprintf(com, "\033[2J\033[H");
+    int my_score, enemy_score;
+    if (player == 1) {
+        my_score = score1;
+        enemy_score = score2;
+    } else {
+        my_score = score2;
+        enemy_score = score1;
+    }
+    fprintf(com, "You: %d   Enemy: %d\n", my_score, enemy_score);
+    if (my_score > enemy_score) fprintf(com, "You Win\n");
+    else fprintf(com, "You Lose\n");
+    while(1); // 無限ループ
+}
+
 void task1() {
     int frame = 0;
     while (1) {
-        if (frame++ % DRAW_INTERVAL == 0) fdraw(com0out, 1);  // P1画面
+        if (frame++ % DRAW_INTERVAL == 0) {
+            if (game_state == GAME) fdraw(com0out, 1);  // P1画面
+            else fdraw_result(com0out, 1);
+        }
     }
 }
 
 void task2() {
     int frame = 0;
     while (1) {
-        if (frame++ % DRAW_INTERVAL == 0) fdraw(com1out, 2);  // P2画面 (上下反転)
+        if (frame++ % DRAW_INTERVAL == 0) {
+            if (game_state == GAME) fdraw(com1out, 2);  // P2画面 (上下反転)
+            else fdraw_result(com1out, 2);
+        }
     }
 }
 
 void task3() {
-    int frame = 0;
     while (1) {
-        if (frame++ % UPDATE_INTERVAL == 0) update();
+        if (update_frame++ % UPDATE_INTERVAL == 0) update();
     }
 }
 
