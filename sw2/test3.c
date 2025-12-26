@@ -15,20 +15,31 @@
 int ball_x, ball_y;
 int ball_dx, ball_dy;
 int bar1, bar2;
+int score1, score2;   // プレイヤ1/2のスコア
+
+void reset_ball(int toward_top) {
+    ball_x = BOARD_W / 2;
+    ball_y = BOARD_H / 2;
+    ball_dx = 1;
+    ball_dy = toward_top ? -1 : 1;
+}
 
 void setup() {
-    ball_x = 0;
-    ball_y = 0;
-    ball_dx = 1;
-    ball_dy = 1;
-    bar1 = 15;
-    bar2 = 15;
+    score1 = 0;
+    score2 = 0;
+
+    reset_ball(0);   // 最初はプレイヤ1側へ
+    bar1 = 15;       // 下（プレイヤ1）
+    bar2 = 15;       // 上（プレイヤ2）
 }
 
 void update() {
     P(UPDATE_SEMA);
+
     ball_x += ball_dx;
     ball_y += ball_dy;
+
+    // 左右の壁で反射
     if (ball_x < 0) {
         ball_x = 0;
         ball_dx *= -1;
@@ -36,39 +47,82 @@ void update() {
         ball_x = BOARD_W - 1;
         ball_dx *= -1;
     }
-    if (ball_y < 0) {
-        ball_y = 0;
-        ball_dy *= -1;
-    } else if (BOARD_H <= ball_y) {
-        ball_y = BOARD_H - 1;
-        ball_dy *= -1;
+
+    // 上側（プレイヤ2側）
+    if (ball_dy < 0 && ball_y <= 0) {
+        if (bar2 <= ball_x && ball_x < bar2 + BAR_W) {
+            ball_y = 0;
+            ball_dy = 1;
+        } else {
+            // P1の得点
+            score1++;
+            reset_ball(1);   // 次は上方向へ
+        }
     }
+
+    // 下側（プレイヤ1側）
+    if (ball_dy > 0 && ball_y >= BOARD_H - 1) {
+        if (bar1 <= ball_x && ball_x < bar1 + BAR_W) {
+            ball_y = BOARD_H - 1;
+            ball_dy = -1;
+        } else {
+            // P2の得点
+            score2++;
+            reset_ball(0);   // 次は下方向へ
+        }
+    }
+
     V(UPDATE_SEMA);
 }
 
-void fdraw(FILE *com) {
+// player: 1 = プレイヤ1画面(com0out), 2 = プレイヤ2画面(com1out)
+void fdraw(FILE *com, int player) {
     P(DRAW_SEMA);
     P(UPDATE_SEMA);
-    for (int i = 0; i < BOARD_H; i++) {
-        if (i == BOARD_H - 1) {
-            for (int j = 0; j < BOARD_W; j++) {
-                if (j < bar1) fprintf(com, " ");
-                else if (bar1 <= j && j < bar1 + BAR_W) fprintf(com, "#");
-                else {
-                    fprintf(com, "\n");
-                    break;
-                }
-            }
-        }
-        else if (ball_y != i) fprintf(com, "\n");
-        else {
-            for (int j = 0; j < BOARD_W; j++) {
-                if (ball_x == j) fprintf(com, "O");
-                else fprintf(com, " ");
-            }
-            fprintf(com, "\n");
-        }
+
+    // 画面クリア
+    fprintf(com, "\033[2J\033[H");
+
+    int my_score, enemy_score;
+    if (player == 1) {
+        my_score = score1;
+        enemy_score = score2;
+    } else {
+        my_score = score2;
+        enemy_score = score1;
     }
+    fprintf(com, "You: %d   Enemy: %d\n", my_score, enemy_score);
+
+    for (int screen_y = 0; screen_y < BOARD_H; screen_y++) {
+        // プレイヤ2画面では上下反転
+        int world_y;
+        if (player == 1) {
+            world_y = screen_y;                   // そのまま
+        } else {
+            world_y = BOARD_H - 1 - screen_y;     // 上下反転
+        }
+
+        for (int x = 0; x < BOARD_W; x++) {
+            char ch = ' ';
+
+            // 上バー（プレイヤ2）は world_y == 0
+            if (world_y == 0 && bar2 <= x && x < bar2 + BAR_W) {
+                ch = '#';
+            }
+            // 下バー（プレイヤ1）は world_y == BOARD_H - 1
+            if (world_y == BOARD_H - 1 && bar1 <= x && x < bar1 + BAR_W) {
+                ch = '#';
+            }
+            // ボールは最優先
+            if (ball_x == x && ball_y == world_y) {
+                ch = 'O';
+            }
+
+            fputc(ch, com);
+        }
+        fputc('\n', com);
+    }
+
     V(UPDATE_SEMA);
     V(DRAW_SEMA);
 }
@@ -76,15 +130,15 @@ void fdraw(FILE *com) {
 void task1() {
     int frame = 0;
     while (1) {
-        if (frame++ % DRAW_INTERVAL == 0) fdraw(com0out);
-    }	
+        if (frame++ % DRAW_INTERVAL == 0) fdraw(com0out, 1);  // P1画面
+    }
 }
 
 void task2() {
     int frame = 0;
     while (1) {
-        if (frame++ % DRAW_INTERVAL == 0) fdraw(com1out);
-    }	
+        if (frame++ % DRAW_INTERVAL == 0) fdraw(com1out, 2);  // P2画面 (上下反転)
+    }
 }
 
 void task3() {
@@ -95,20 +149,24 @@ void task3() {
 }
 
 void task4() {
+    // プレイヤ1（下）の操作：inbyte(0)
     while (1) {
         char input = inbyte(0);
         if (input == 'a') bar1--;
         else if (input == 'd') bar1++;
+
         if (bar1 + BAR_W <= 0) bar1 = BOARD_W - BAR_W;
         else if (BOARD_W < bar1) bar1 = 0;
     }
 }
 
 void task5() {
+    // プレイヤ2（上）の操作：inbyte(1)
     while (1) {
         char input = inbyte(1);
         if (input == 'a') bar2--;
         else if (input == 'd') bar2++;
+
         if (bar2 + BAR_W <= 0) bar2 = BOARD_W - BAR_W;
         else if (BOARD_W < bar2) bar2 = 0;
     }
@@ -128,6 +186,7 @@ int main() {
     set_task(task3);
     set_task(task4);
     set_task(task5);
-    
+
     begin_sch();
 }
+
